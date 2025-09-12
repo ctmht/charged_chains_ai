@@ -1,0 +1,6 @@
+numpy~=2.3.1
+matplotlib~=3.10.3
+freud
+MDAnalysis
+torch
+scipy

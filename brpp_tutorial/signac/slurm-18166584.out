@@ -1,0 +1,37 @@
+
+###############################################################################
+Hábrók Cluster
+Job 18166584 for user s4737849
+Finished at: Mon Jul  7 14:35:17 CEST 2025
+
+Job details:
+============
+
+Job ID                         : 18166584
+Name                           : Project/58ad0af8183524791b0410b3a71bcae1/run_simulati/992efacacc2fdff2f958c215b07de524
+User                           : s4737849
+Partition                      : regularshort
+Nodes                          : node110
+Number of Nodes                : 1
+Cores                          : 1
+Number of Tasks                : 1
+State                          : COMPLETED  
+Submit                         : 2025-07-07T14:34:25
+Start                          : 2025-07-07T14:34:25
+End                            : 2025-07-07T14:35:13
+Reserved walltime              : 00:10:00
+Used walltime                  : 00:00:48
+Used CPU time                  : 00:00:41 (Efficiency: 85.54%)
+% User (Computation)           : 95.42%
+% System (I/O)                 :  4.58%
+Total memory reserved          : 2000M
+Maximum memory used            : 39.18M
+
+Acknowledgements:
+=================
+
+Please see this page for information about acknowledging Hábrók in your publications:
+
+https://wiki.hpc.rug.nl/habrok/introduction/scientific_output
+
+################################################################################
