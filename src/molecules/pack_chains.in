@@ -1,4 +1,4 @@
-LAMMPS data file for coarse grained linear chain with charged beads
+
 
 
 # side length of the box
@@ -24,12 +24,10 @@ create_box    4 mybox bond/types 1 extra/bond/per/atom 5 extra/special/per/atom 
 # read the molecule file into a molecule
 molecule      mol1 ${molecule_file}
 
-#create_atoms type  style   particles   	seed  region  mol   molfile  seed
-create_atoms  1     random  ${num_chains}   1245  NULL    mol   mol1     12553
+#create_atoms type  style   particles       seed  region  mol   molfile  seed
+create_atoms  0     random  ${num_chains}   1245  NULL    mol   mol1     12553
 
 mass          * 1.0
-
-read_data	  polymer.data
 
 
 # file name to write to after packing the box with chains
