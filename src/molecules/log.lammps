@@ -1,0 +1,63 @@
+LAMMPS (23 Jun 2022 - Update 1)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+
+
+
+# side length of the box
+variable      L equal 35
+
+units         lj
+atom_style    full
+dimension     3
+region        mybox block 0 ${L} 0 ${L} 0 ${L}
+region        mybox block 0 35 0 ${L} 0 ${L}
+region        mybox block 0 35 0 35 0 ${L}
+region        mybox block 0 35 0 35 0 35
+boundary      p p p
+
+
+# molecule file that defines a single polymer chain
+variable      molecule_file string 'polymer.mol'
+
+# number of chains to pack into the box
+variable      num_chains equal 1
+
+
+# create a box that can accomodate 2 types of particles, 1 type of bond, etc.
+create_box    4 mybox bond/types 1 extra/bond/per/atom 5 extra/special/per/atom 100
+Created orthogonal box = (0 0 0) to (35 35 35)
+  1 by 1 by 1 MPI processor grid
+
+# read the molecule file into a molecule
+molecule      mol1 ${molecule_file}
+molecule      mol1 polymer.mol
+Read molecule template mol1:
+  1 molecules
+  0 fragments
+  20 atoms with max type 4
+  19 bonds with max type 1
+  0 angles with max type 0
+  0 dihedrals with max type 0
+  0 impropers with max type 0
+
+#create_atoms type  style   particles       seed  region  mol   molfile  seed
+create_atoms  0     random  ${num_chains}   1245  NULL    mol   mol1     12553
+create_atoms  0     random  1   1245  NULL    mol   mol1     12553
+Created 20 atoms
+  using lattice units in orthogonal box = (0 0 0) to (35 35 35)
+  create_atoms CPU = 0.003 seconds
+
+mass          * 1.0
+
+
+# file name to write to after packing the box with chains
+variable      finalfile string 'packed.data'
+
+write_data    ${finalfile} nofix nocoeff
+write_data    packed.data nofix nocoeff
+System init for write_data ...
+WARNING: Bonds are defined but no bond style is set (src/force.cpp:192)
+WARNING: Likewise 1-2 special neighbor interactions != 1.0 (src/force.cpp:194)
+WARNING: Communication cutoff is 0.0. No ghost atoms will be generated. Atoms may get lost. (src/comm_brick.cpp:210)
+Total wall time: 0:00:00
