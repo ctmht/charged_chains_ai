@@ -58,7 +58,7 @@ def create_molecule(
 	print(atom_types, atom_charges, bond_at1, sep='\n')
 	
 	
-	filename = f'polymer.{filetype}'
+	filename = f'0_b_polymer.{filetype}'
 	with open(filename, 'w') as f:
 		if filetype == 'mol':
 			f.write(f'# Polymer sequence:\n# {sequence}\n')
