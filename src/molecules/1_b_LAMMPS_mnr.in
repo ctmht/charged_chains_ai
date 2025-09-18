@@ -2,7 +2,8 @@
 
 variable		outputfile_created string '1_a_created.data'
 variable		outputfile_relaxed string '2_relaxed.data'
-variable		outputfile_trajlin string '3_trajlin.data'
+variable		outputfile_selfasb string '3_a_self_assemble.lammpstrj'
+variable		outputfile_trajlin string '3_b_trajlin.data'
 variable		outputfile_assembled string '4_assembled.data'
 
 units           lj
@@ -81,8 +82,9 @@ pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 
 fix             noDrift 	all momentum 10 linear 1 1 1
 fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
-dump            assemble 	all custom 1000 self_assemble.lammpstrj id type xu yu zu vx vy vz
-dump            lindump 	all custom 10000 ${outputfile_trajlin} id type xu yu zu vx vy vz
+
+dump            assemble 	all custom 1000 	${outputfile_selfasb} id type xu yu zu vx vy vz
+dump            lindump 	all custom 10000 	${outputfile_trajlin} id type xu yu zu vx vy vz
 
 run             ${runtime}
 
