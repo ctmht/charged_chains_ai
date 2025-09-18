@@ -1,3 +1,3 @@
-# molecular_dynamics_ai
-TEST
+## MD using charged monomers and AI
 
+Details not available yet
