@@ -102,14 +102,14 @@ def create_molecule(
 			f.write(f'0.0 {yhi :.2f} ylo yhi\n')
 			f.write(f'-5.0 5.0 zlo zhi\n\n')
 			
+			# [typeID] [mass]
 			f.write('Masses\n\n')
-			f.write('# [typeID] [mass]\n')
 			for atom_type in sorted(set(atom_types)):
 				f.write(f'{atom_type} 1.0\n')
 			f.write('\n')
 			
+			# [atom_id] [molecule_tag] [atom_type] [charge] [pos_x] [pos_y] [pos_z]
 			f.write('Atoms # full\n\n')
-			f.write('# [atom_id] [molecule_tag] [atom_type] [charge] [pos_x] [pos_y] [pos_z]\n')
 			for idx in range(chain_length):
 				f.write(f'{idx + 1 :<5} 1 {atom_types[idx]} {atom_charges[idx] :>5.1f} '
 						f'{atom_coords[idx] :<7.5f} 0.0 0.0\n')
