@@ -78,6 +78,7 @@ pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 fix             noDrift all momentum 10 linear 1 1 1
 fix             nvt1 all nvt temp ${Temp} ${Temp} 0.5
 dump            1 all custom 1000 self_assemble.lammpstrj id type xu yu zu vx vy vz
+dump		lindump all custom 10000 traj.lin id type xu yu zu vx vy vz
 
 run             ${runtime}
 
