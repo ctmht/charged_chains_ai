@@ -2,10 +2,10 @@
 
 
 # molecule file that defines a single polymer chain
-variable		molecule_file string '0_b_polymer.mol'
+variable		molecule_file string '1_polymer.mol'
 
 # file name to write to after packing the box with chains
-variable		outputfile_created string '1_a_created.data'
+variable		outputfile_created string '3_created.data'
 
 
 # side length of the box

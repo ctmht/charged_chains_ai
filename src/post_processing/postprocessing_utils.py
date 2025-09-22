@@ -3,8 +3,6 @@ import MDAnalysis as mda  	# manipulate and analyse molecular dynamics trajector
 import numpy as np
 import torch
 
-from scipy.differentiate import jacobian as gradient, hessian
-
 from collections.abc import Callable
 
 
@@ -72,11 +70,24 @@ def sorted_eigenvalues(
 	return torch.linalg.eigvalsh(symmetric_matrix).flip(dims = (-1,))
 
 
-def autocorrelation(
-	par
-) -> None:
-	# TODO: generic autocorrelation computation tailored for reuse on several statistics
-	...
+def correlation(
+	sample1,
+	sample2
+) -> torch.Tensor:
+	r"""
+	Computes correlation of two identically-sized random variables with zero mean (e.g. the
+	(auto)correlation of the end-to-end distance vector between the first and current time steps)
+	
+	Args:
+		items (`list` or iterable): per-frame attribute to be used in autocorrelation computation
+	"""
+	_sample1 = torch.as_tensor(sample1)
+	_sample2 = torch.as_tensor(sample2)
+	
+	_corr = (_sample1.transpose(0, -1) @ _sample2) / (_sample1.transpose(0, -1) @ _sample1)
+	
+	return _corr
+	
 
 
 #####################################################################
@@ -101,6 +112,20 @@ def gyration_tensor(
 	_n_atoms = _atom_positions.shape[0]
 	
 	return _positions_centered.mT @ _positions_centered / _n_atoms
+
+
+def end_to_end_distance(
+	atom_positions: np.ndarray
+) -> torch.Tensor:
+	r"""
+	Compute the end-to-end distance (3-vector) given the list of all atom positions.
+	
+	Args:
+		atom_positions (`np.ndarray`): position of atoms in the linear polymer chain. Must be a
+			`np.ndarray`, and it is assumed that each row represents an individual atom (directly
+			compatible with MDAnalysis frames)
+	"""
+	return torch.Tensor(atom_positions[0] - atom_positions[-1])
 
 
 #####################################################################
@@ -169,7 +194,21 @@ def rel_shape_anisotropy(
 
 
 
-def load():
+def load(
+	topology: str,
+	trajectory: str,
+	dt_integration = 0.005
+) -> mda.Universe:
+	r"""
+	Create a MDAnalysis Universe based on the given (final) molecule topology and its trajectory
+	"""
+	return mda.Universe(topology, trajectory, format="LAMMPSDUMP", dt=dt_integration)
+
+
+
+
+def load_old():
+	# TODO: update, refactor
 	folder = 'src/'
 	topology = folder+'final.data'
 	trajectory_lin = folder+'traj.lin'
@@ -280,4 +319,15 @@ def load():
 	
 
 if __name__ == '__main__':
-	load()
+	...
+	# load()
+	
+	# n_frames = 6
+	# dim = 3
+	# ete = [np.random.rand(dim)**2 for _ in range(n_frames)]
+	
+	# print(ete)
+	
+	# autocorr = [correlation(ete[0], ete[i]) for i in range(n_frames)]
+	# autocorr = torch.Tensor(autocorr)
+	# print(autocorr)
