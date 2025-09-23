@@ -1,7 +1,13 @@
 
 
-variable		variables_file string '0_sims_vars.data'
-read_data		${variables_file}
+variable        runtime equal 1000000
+variable		subsample_rate equal 1000
+
+variable		outputfile_created string '3_created.data'
+variable		outputfile_relaxed string '5_relaxed.data'
+variable		outputfile_selfasb string '6_a_self_assemble.lammpstrj'
+variable		outputfile_trajlin string '6_b_trajlin.data'
+variable		outputfile_assembled string '7_assembled.data'
 
 units           lj
 atom_style      full

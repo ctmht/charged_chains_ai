@@ -6,3 +6,4 @@ setup(
     package_dir = {"": "src"},
     packages = find_packages(where = "src"),
 )
+# To use: pip install -e .

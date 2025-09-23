@@ -78,6 +78,8 @@ def correlation(
 	Computes correlation of two identically-sized random variables with zero mean (e.g. the
 	(auto)correlation of the end-to-end distance vector between the first and current time steps)
 	
+	TODO: this is not okay
+	
 	Args:
 		items (`list` or iterable): per-frame attribute to be used in autocorrelation computation
 	"""

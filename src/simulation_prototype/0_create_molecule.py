@@ -140,6 +140,6 @@ charge_map_global = {
 
 
 if __name__ == '__main__':
-	seq = 'ABDDABCCBAABBAABCDAB'
+	seq = 'ABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDAB'
 	create_molecule(seq, charge_map_global, 'mol')
 	create_molecule(seq, charge_map_global, 'data')

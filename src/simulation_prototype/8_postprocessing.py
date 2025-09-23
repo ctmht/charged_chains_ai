@@ -21,7 +21,7 @@ def process():
 		_ = next(polf)
 		seq = next(polf)[2:]
 	
-	outfile = os.path.join(script_dir, '9_processed.csv')
+	outfile = os.path.join(script_dir, '9_processed.pkl')
 	
 	gyr_eigenvals = []
 	end_to_end_vs = []
@@ -113,14 +113,7 @@ def process():
 	
 	df = pd.DataFrame(results)
 	
-	for col in df.columns:
-		df[col] = df[col].apply(lambda x: x.detach().numpy() if torch.is_tensor(x) else x)
-	
-	append = False
-	if append:
-		df.to_csv(outfile, mode='a', header=False)
-	else:
-		df.to_csv(outfile)
+	df.to_pickle(outfile)
 
 	
 
