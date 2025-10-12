@@ -10,22 +10,29 @@ def process():
 	r"""
 	
 	"""
+	dt_integration = 0.005
 	script_dir = os.path.dirname(os.path.abspath(__file__))
 	topology = os.path.join(script_dir, '7_assembled.data')
 	trajectory = os.path.join(script_dir, '6_b_trajlin.data')
 	# trajectory = os.path.join(script_dir, '6_a_self_assemble.lammpstrj')
-	universe = post.load(topology, trajectory)
+	universe = post.load(topology, trajectory, dt_integration)
 	
 	polymer_file = os.path.join(script_dir, '1_polymer.mol')
 	with open(polymer_file, 'r') as polf:
 		_ = next(polf)
 		seq = next(polf)[2:]
 	
+	# run_file = os.path.join(script_dir, '4_LAMMPS_mnr.in')
+	# with open(run_file, 'r') as runf:
+	# 	while True:
+	# 		line = next(runf)
+	# 		if 'subsample_rate' in line: break
+	# 	subsample_rate = int(line.split(' ')[-1])
+	
 	outfile = os.path.join(script_dir, '9_processed.pkl')
 	
 	gyr_eigenvals = []
 	end_to_end_vs = []
-	ete_autocorrs = []
 	
 	radgyr_per_fr = []
 	aspher_per_fr = []
@@ -38,8 +45,6 @@ def process():
 		# End-to-end distance vector and its autocorrelation
 		end_to_end = post.end_to_end_distance(positions)
 		end_to_end_vs.append(end_to_end)
-		autocorr = post.correlation(end_to_end_vs[0], end_to_end_vs[-1])
-		ete_autocorrs.append(autocorr)
 		
 		# Gyration tensor and its eigenvalues
 		gyr_tensor = post.gyration_tensor(positions)
@@ -57,6 +62,36 @@ def process():
 		aspher_per_fr.append(asphericity)
 		acylin_per_fr.append(acylindricity)
 		relsha_per_fr.append(relshapeaniso)
+	
+	# Autocorrelation analysis
+	maxoffset = 200
+	times = torch.arange(0, maxoffset, 1)
+	ete_autocorrs = post.end_to_end_autocorrelation(end_to_end_vs, maxoffset)
+	tau, cutoff, talpha = post.fit_exponential_decay(X=times, Y=ete_autocorrs)
+	
+	# # PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
+	# from matplotlib import pyplot as plt
+	# squared = True
+	# log = True
+	# if not squared:
+	# 	plt.plot(times, ete_autocorrs,
+	# 	   	color='blue', label="True data")
+	# 	plt.plot(times, torch.exp(-times/tau),
+	# 	   	color='magenta', label="Best fit to true data")
+	# else:
+	# 	plt.plot(times, torch.square(ete_autocorrs),
+	# 	   	color='blue', label="Squared data")
+	# 	plt.plot(times, torch.exp(- 2/tau * times),
+	# 	   	color='magenta', label="Best fit to squared data")
+	# if log and squared:
+	# 	plt.yscale('log')
+	# if not log:
+	# 	plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
+	# plt.axhline(atol, xmin=0, xmax=200, ls='-', c='g', label="atol")
+	# plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label="talpha")
+	# plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label="cutoff")
+	# plt.legend()
+	# plt.show()
 	
 	radgyr_per_fr = torch.as_tensor(radgyr_per_fr)
 	radgyr_per_fr_mean = torch.mean(radgyr_per_fr)
@@ -88,7 +123,7 @@ def process():
 		gyr_tensor_eigenvalues = [torch.stack(gyr_eigenvals, dim = 0)],
 		
 		end_to_end_vectors = [torch.stack(end_to_end_vs, dim = 0)],
-		end_to_end_autocorrelations = [torch.stack(ete_autocorrs, dim = 0)],
+		end_to_end_autocorrelations = [ete_autocorrs],
 		
 		mean_eigenvalues = [mean],
 		covariance_eigenvalues = [cov],
@@ -115,13 +150,75 @@ def process():
 	
 	df.to_pickle(outfile)
 
+
+
+def process_autocorrelation():
+	"""
+	
+	"""
+	# Define inputs and load universe
+	dt_integration = 0.005
+	script_dir = os.path.dirname(os.path.abspath(__file__))
+	topology = os.path.join(script_dir, '7_assembled.data')
+	trajectory = os.path.join(script_dir, '6_b_trajlin.data')
+	universe = post.load(topology, trajectory, dt_integration)
+	
+	# Extract monomer sequence from molecule file
+	polymer_file = os.path.join(script_dir, '1_polymer.mol')
+	with open(polymer_file, 'r') as polf:
+		_ = next(polf)
+		seq = next(polf)[2:]
+	
+	# # Extract subsampling rate from LAMMPS input file
+	# run_file = os.path.join(script_dir, '4_LAMMPS_mnr.in')
+	# with open(run_file, 'r') as runf:
+	# 	while True:
+	# 		line = next(runf)
+	# 		if 'subsample_rate' in line: break
+	# 	subsample_rate = int(line.split(' ')[-1])
+	
+	# Define output file
+	outfile = os.path.join(script_dir, '9_processed.pkl')
+	
+	# Get end-to-end distance vector at each frame
+	end_to_end_vs = []
+	for frame in universe.trajectory:
+		positions = frame.positions
+		
+		end_to_end = post.end_to_end_distance(positions)
+		end_to_end_vs.append(end_to_end)
+	
+	# Autocorrelation analysis
+	maxoffset = 200
+	times = torch.arange(0, maxoffset, 1)
+	ete_autocorrs = post.end_to_end_autocorrelation(end_to_end_vs, maxoffset)
+	tau, cutoff, talpha = post.fit_exponential_decay(X=times, Y=ete_autocorrs)
+	
+	# Convert the determined talpha to actual simulation time and number of steps
+	talpha_st = talpha * (universe.trajectory[1].time - universe.trajectory[0].time)
+	talpha_ss = talpha_st / dt_integration
+	
+	# Saving results
+	results = dict(
+		sequence = [seq],
+		end_to_end = [end_to_end_vs],
+		maxoffset_autocorrs = [maxoffset],
+		end_to_end_autocorrs = [ete_autocorrs],
+		tau = [tau],
+		cutoff = [cutoff],
+		talpha_unconv = [talpha],
+		talpha_simtime = [talpha_st],
+		talpha_simsteps = [talpha_ss]
+	)
+	df = pd.DataFrame(results)
+	df.to_pickle(outfile)
+	
+	# TODO: remove on actual large simulations
+	outfile = os.path.join(script_dir, '9_processed_DUMP.csv')
+	df.to_csv(outfile)
+
 	
 
 
 if __name__ == '__main__':
-	# from importlib import resources
-	# prototype_files_tvs = resources.files('simulation_prototype')
-	# topology = prototype_files_tvs.joinpath('4_assembled.data')
-	# trajectory = prototype_files_tvs.joinpath('3_b_trajlin.data')
-	# universe = post.load(topology, trajectory)
-	process()
+	process_autocorrelation()

@@ -70,28 +70,6 @@ def sorted_eigenvalues(
 	return torch.linalg.eigvalsh(symmetric_matrix).flip(dims = (-1,))
 
 
-def correlation(
-	sample1,
-	sample2
-) -> torch.Tensor:
-	r"""
-	Computes correlation of two identically-sized random variables with zero mean (e.g. the
-	(auto)correlation of the end-to-end distance vector between the first and current time steps)
-	
-	TODO: this is not okay
-	
-	Args:
-		items (`list` or iterable): per-frame attribute to be used in autocorrelation computation
-	"""
-	_sample1 = torch.as_tensor(sample1)
-	_sample2 = torch.as_tensor(sample2)
-	
-	_corr = (_sample1.transpose(0, -1) @ _sample2) / (_sample1.transpose(0, -1) @ _sample1)
-	
-	return _corr
-	
-
-
 #####################################################################
 ### Task-specific frame processing functions
 #####################################################################
@@ -130,6 +108,91 @@ def end_to_end_distance(
 	return torch.Tensor(atom_positions[0] - atom_positions[-1])
 
 
+def end_to_end_autocorrelation(
+	end_to_end_vs: torch.Tensor,
+	lag_max: int
+) -> torch.Tensor:
+	r"""
+	
+	"""
+	end_to_end_vs_t = torch.stack(end_to_end_vs, dim = 1)
+	n_samples = end_to_end_vs_t.shape[1]
+	
+	autocorr = torch.zeros(lag_max)
+	
+	for t_lag in range(lag_max):
+		series0 = end_to_end_vs_t[:, 0 : n_samples - t_lag]
+		series0_sum = series0.sum(dim = 1)
+		series0_sum_norm = torch.linalg.vector_norm(series0_sum, ord = 2) ** 2
+		series0_norm_sum = torch.trace(series0.transpose(0, -1) @ series0)
+		series0_std = torch.sqrt((n_samples - t_lag) * series0_norm_sum - series0_sum_norm)
+		
+		seriest = end_to_end_vs_t[:, t_lag : n_samples]
+		seriest_sum = seriest.sum(dim = 1)
+		seriest_sum_norm = torch.linalg.vector_norm(seriest_sum, ord = 2) ** 2
+		seriest_norm_sum = torch.trace(seriest.transpose(0, -1) @ seriest)
+		seriest_std = torch.sqrt((n_samples - t_lag) * seriest_norm_sum - seriest_sum_norm)
+		
+		series0t_inner = torch.trace(series0.transpose(0, -1) @ seriest)
+		
+		numerator = (n_samples - t_lag) * series0t_inner - series0_sum.transpose(0, -1) @ seriest_sum
+		denominator = series0_std * seriest_std
+		
+		autocorr[t_lag] = numerator / denominator
+	
+	return autocorr
+
+
+def fit_exponential_decay(
+	X: torch.Tensor,
+	Y: torch.Tensor,
+	alpha: float = 0.95,
+	atol: float = 1e-3
+) -> tuple[float, int]:
+	r"""
+	Fits an exponential decay of the form Y = exp(- X / k) (*) and determines cutoff point X0 where
+	at most alpha of the density lies in the region X >= X0.
+	
+	Args:
+		X (`torch.Tensor`): the x values of the data which we want to fit to
+		Y (`torch.Tensor`): the y values of the data
+		alpha (`float`): confidence level for determining cutoff after fitting the regression. This
+			happens through the use of the exponential distribution quantile function once the rate
+			parameter k has been determined. Note that alpha=1.00 coresponds to the point at X=+inf
+			and alpha=0.00 corresponds to X=0, both unappropriate for any practical purpose
+		atol (`float`): absolute tolerance for breaking monotonicity. Since the use of this
+			function targets autocorrelation functions, it is expected that this decreases 'nicely'
+			before starting to fluctuate uncontrollably at an undetermined cutoff point. A high
+			tolerance will result in the entire data being used in the regression, but a too low
+			tolerance might cut off the data too early to provide an accurate regression line.
+	
+	(*) To be precise, the function fits the regression ln(Y**2) = (-2 / k) X in order to find k,
+		a transformation we perform to ensure the logarithm is well-defined.
+	"""
+	if not 0 < alpha < 1:
+		raise ValueError(f"'alpha' confidence level must be between 0 and 1, got {alpha=}")
+	if atol < 0:
+		raise ValueError(f"'atol' absolute tolerance must be non-negative, got {atol=}")
+	
+	# Determine cutoff for "well-behaved" part of autocorrelation
+	# return index of *first* position where this is true
+	cutoff = torch.argmax((Y.diff() > atol).int())
+	cutoff = Y.shape[0] if cutoff == 0 else cutoff
+	
+	# Linear regression without intercept: ln(Y^2) = (-2/tau) X
+	# Analytical solution: tau = - (sum_i (2 T[i])**2) / (sum_i (2 T[i] ln(Y^2[i])))
+	Yp2 = torch.square(Y[:cutoff])
+	Xt2 = 2 * X[:cutoff]
+	tau = - torch.sum(torch.square(Xt2)) / torch.sum(Xt2 * torch.log(Yp2))
+	
+	# Determine X-value such that beyond there is less than (1-alpha) autocorrelation "density"
+	# use the quantile function (inverse CDF) of exponential distribution
+	icdf = - torch.log(torch.scalar_tensor(1 - alpha)) * tau
+	t_alpha = torch.ceil(icdf)
+	
+	return tau, cutoff, t_alpha
+
+
 #####################################################################
 ### Simulation statistics specific to gyration tensor eigenvalues
 #####################################################################
@@ -145,7 +208,7 @@ def radius_of_gyration(
 		gyr_evals_vec3 (`torch.Tensor`): the three eigenvalues of the gyration tensor in a single
 			vector. Eigenvalue ordering in this vector is irrelevant
 	"""
-	return torch.linalg.vector_norm(gyr_evals_vec3)
+	return torch.linalg.vector_norm(gyr_evals_vec3, ord = 2)
 
 
 def asphericity(
