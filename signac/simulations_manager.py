@@ -113,15 +113,14 @@ def create_polymer(
     Create a polymer with the sequence given by this job
     """
     # Find molecule file creation script
-    jpp = os.path.abspath(job.project.path)
-    create_mol_fname = f"simulation_prototype_{job.sp.taskname}/0_create_molecule.py"
-    python_script_location = os.path.join(jpp, create_mol_fname)
+    jpp = os.path.abspath(job.path)
+    python_script_location = os.path.join(jpp, "0_create_molecule.py")
     
     # Set up shell command to run script
     sequence = job.sp.sequence
     command_to_run = f"python {python_script_location} {sequence}"
     
-    print(f"\nrunning 0_create_molecule.py on job id {job.id} to generate a chain with sequence {sequence}\n")
+    print(f"\nRunning '0_create_molecule.py' on job id '{job.id}' to generate a chain with sequence '{sequence}'\n")
 
     return command_to_run
 
@@ -135,13 +134,19 @@ def create_lammps_simulation(
     """
     Run LAMMPS script to create the environment
     """
-    # Find LAMMPS creation script and run
-    jpp = os.path.abspath(job.project.path)
-    create_env_fname = f"simulation_prototype_{job.sp.taskname}/2_LAMMPS_creation.in"
-    lammps_script_location = os.path.join(jpp, create_env_fname)
+    # # Find LAMMPS creation script and run
+    # jpp = os.path.abspath(job.project.path)
+    # create_env_fname = f"simulation_prototype_{job.sp.taskname}/2_LAMMPS_creation.in"
+    # lammps_script_location = os.path.join(jpp, create_env_fname)
     
-    # Set up shell command to run script
-    command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
+    # # Set up shell command to run script
+    # command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
+    
+    # Find bash script for running this step
+    jpp = os.path.abspath(job.path)
+    bash_script_location = os.path.join(jpp, "runscript_2.sh")
+    
+    command_to_run = f"bash {bash_script_location}"
     
     return command_to_run
 
@@ -155,13 +160,19 @@ def run_simulation(
     """
     Run LAMMPS script to simulate polymer assembly
     """
-    # Find (energy minimization and) running script
-    jpp = os.path.abspath(job.project.path)
-    create_env_fname = f"simulation_prototype_{job.sp.taskname}/4_LAMMPS_mnr.in"
-    lammps_script_location = os.path.join(jpp, create_env_fname)
+    # # Find (energy minimization and) running script
+    # jpp = os.path.abspath(job.project.path)
+    # create_env_fname = f"simulation_prototype_{job.sp.taskname}/4_LAMMPS_mnr.in"
+    # lammps_script_location = os.path.join(jpp, create_env_fname)
     
-    # Set up shell command to run script
-    command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
+    # # Set up shell command to run script
+    # command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
+    
+    # Find bash script for running this step
+    jpp = os.path.abspath(job.path)
+    bash_script_location = os.path.join(jpp, "runscript_4.sh")
+    
+    command_to_run = f"bash {bash_script_location}"
     
     return command_to_run
 
