@@ -272,116 +272,116 @@ def load(
 
 
 
-def load_old():
-	# TODO: update, refactor
-	folder = 'src/'
-	topology = folder+'final.data'
-	trajectory_lin = folder+'traj.lin'
-	trajectory_log = folder+'traj.log'
+# def load_old():
+# 	# TODO: update, refactor
+# 	folder = 'src/'
+# 	topology = folder+'final.data'
+# 	trajectory_lin = folder+'traj.lin'
+# 	trajectory_log = folder+'traj.log'
 	
-	# Time step size used in the MD simulations (in reduced units)
-	dt_integration = 0.005
+# 	# Time step size used in the MD simulations (in reduced units)
+# 	dt_integration = 0.005
 	
-	# Creating Universe objects for linear and logarithmic trajectories with MDAnalysis
-	# These objects represent the entire system and allow for analysis of the data
-	universe_lin = mda.Universe(topology, trajectory_lin, format='LAMMPSDUMP', dt=dt_integration)
-	universe_log = mda.Universe(topology, trajectory_log, format='LAMMPSDUMP', dt=dt_integration)
+# 	# Creating Universe objects for linear and logarithmic trajectories with MDAnalysis
+# 	# These objects represent the entire system and allow for analysis of the data
+# 	universe_lin = mda.Universe(topology, trajectory_lin, format='LAMMPSDUMP', dt=dt_integration)
+# 	universe_log = mda.Universe(topology, trajectory_log, format='LAMMPSDUMP', dt=dt_integration)
 	
-	# Calculating the number of frames and beads (particles) in the simulations
-	n_frames_log = universe_log.trajectory.n_frames  	# Total number of frames in the logarithmic trajectory
-	n_frames_lin = universe_lin.trajectory.n_frames  	# Total number of frames in the linear trajectory
-	n_beads = universe_lin.atoms.n_atoms  			 	# Total number of beads (atoms) in the system
+# 	# Calculating the number of frames and beads (particles) in the simulations
+# 	n_frames_log = universe_log.trajectory.n_frames  	# Total number of frames in the logarithmic trajectory
+# 	n_frames_lin = universe_lin.trajectory.n_frames  	# Total number of frames in the linear trajectory
+# 	n_beads = universe_lin.atoms.n_atoms  			 	# Total number of beads (atoms) in the system
 	
-	results = {
-		'time': [],
-		'gte': [],
-		'rg': [],
-		'rsa_sq': [],
-		'ete': [],
-		'b': [],
-		'c': []
-	}
+# 	results = {
+# 		'time': [],
+# 		'gte': [],
+# 		'rg': [],
+# 		'rsa_sq': [],
+# 		'ete': [],
+# 		'b': [],
+# 		'c': []
+# 	}
 	
-	for frame in universe_lin.trajectory:
-		time = frame.time
-		end_to_end_distance = np.linalg.norm(frame.positions[0] - frame.positions[-1])
+# 	for frame in universe_lin.trajectory:
+# 		time = frame.time
+# 		end_to_end_distance = np.linalg.norm(frame.positions[0] - frame.positions[-1])
 		
-		min_positions = torch.min(torch.as_tensor(frame.positions), dim = 0).values
-		max_positions = torch.max(torch.as_tensor(frame.positions), dim = 0).values
-		bound_distance = torch.linalg.norm(max_positions - min_positions)
+# 		min_positions = torch.min(torch.as_tensor(frame.positions), dim = 0).values
+# 		max_positions = torch.max(torch.as_tensor(frame.positions), dim = 0).values
+# 		bound_distance = torch.linalg.norm(max_positions - min_positions)
 		
-		gyr_tensor = get_gyration_tensor(frame.positions)
-		gyr_eigenvalues = get_sorted_eigenvalues(gyr_tensor)
-		rad_gyr = torch.sqrt(torch.sum(gyr_eigenvalues))
+# 		gyr_tensor = get_gyration_tensor(frame.positions)
+# 		gyr_eigenvalues = get_sorted_eigenvalues(gyr_tensor)
+# 		rad_gyr = torch.sqrt(torch.sum(gyr_eigenvalues))
 		
-		results['time'].append(time)
-		results['ete'].append(end_to_end_distance)
-		results['gte'].append(gyr_eigenvalues)
+# 		results['time'].append(time)
+# 		results['ete'].append(end_to_end_distance)
+# 		results['gte'].append(gyr_eigenvalues)
 		
-		results['rg'].append(rg(gyr_eigenvalues))
-		results['b'].append(b(gyr_eigenvalues))
-		results['c'].append(c(gyr_eigenvalues))
-		results['rsa_sq'].append(rsa(gyr_eigenvalues))
+# 		results['rg'].append(rg(gyr_eigenvalues))
+# 		results['b'].append(b(gyr_eigenvalues))
+# 		results['c'].append(c(gyr_eigenvalues))
+# 		results['rsa_sq'].append(rsa(gyr_eigenvalues))
 		
-		print(f"{frame.time : >6.0f}, {end_to_end_distance : >12.6f}, {rad_gyr : >9.6f}, {bound_distance : >12.6f},  {gyr_eigenvalues}")
-	print(f" (time)  (end to end)  (rad gyr)  (bound dist)  (gyr tensor evalues)")
+# 		print(f"{frame.time : >6.0f}, {end_to_end_distance : >12.6f}, {rad_gyr : >9.6f}, {bound_distance : >12.6f},  {gyr_eigenvalues}")
+# 	print(f" (time)  (end to end)  (rad gyr)  (bound dist)  (gyr tensor evalues)")
 	
-	#################################################################
-	## PyTorch KL Divergence between two multivariate normals
-	#################################################################
+# 	#################################################################
+# 	## PyTorch KL Divergence between two multivariate normals
+# 	#################################################################
 	
-	mean, covariance = get_mean_covariance(results['gte'])
+# 	mean, covariance = get_mean_covariance(results['gte'])
 	
-	print(
-		"\nFROM REGULAR DISTRIBUTION\n",
-		'    mean', mean,
-		'    covariance', covariance,
-		'    sorted evalues', get_sorted_eigenvalues(covariance),
-		sep='\n'
-	)
+# 	print(
+# 		"\nFROM REGULAR DISTRIBUTION\n",
+# 		'    mean', mean,
+# 		'    covariance', covariance,
+# 		'    sorted evalues', get_sorted_eigenvalues(covariance),
+# 		sep='\n'
+# 	)
 	
-	dist1 = torch.distributions.MultivariateNormal(
-		mean,
-		covariance
-	)
-	dist2 = torch.distributions.MultivariateNormal(
-		torch.Tensor([0, 0, 0]),
-		torch.eye(3)
-	)
-	dist3 = torch.distributions.MultivariateNormal(
-		torch.Tensor([30, 10, 5]),
-		covariance
-	)
+# 	dist1 = torch.distributions.MultivariateNormal(
+# 		mean,
+# 		covariance
+# 	)
+# 	dist2 = torch.distributions.MultivariateNormal(
+# 		torch.Tensor([0, 0, 0]),
+# 		torch.eye(3)
+# 	)
+# 	dist3 = torch.distributions.MultivariateNormal(
+# 		torch.Tensor([30, 10, 5]),
+# 		covariance
+# 	)
 	
-	print(
-		'\nFarther dist:', torch.distributions.kl.kl_divergence(dist1, dist2).item(),
-		'\nCloser dist:', torch.distributions.kl.kl_divergence(dist1, dist3).item(),
-		'\n'
-	)
+# 	print(
+# 		'\nFarther dist:', torch.distributions.kl.kl_divergence(dist1, dist2).item(),
+# 		'\nCloser dist:', torch.distributions.kl.kl_divergence(dist1, dist3).item(),
+# 		'\n'
+# 	)
 	
-	#################################################################
-	## Testing mean R_g over time versus R_g defined by mean evalues
-	#################################################################
-	arr_pf = torch.as_tensor(results['rg'])
-	print(f"R_g   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
-	tarmean, tarstd = get_radgyr_with_std(mean, covariance)
-	print(f"R_g  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
+# 	#################################################################
+# 	## Testing mean R_g over time versus R_g defined by mean evalues
+# 	#################################################################
+# 	arr_pf = torch.as_tensor(results['rg'])
+# 	print(f"R_g   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
+# 	tarmean, tarstd = get_radgyr_with_std(mean, covariance)
+# 	print(f"R_g  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
 	
-	arr_pf = torch.as_tensor(results['b'])
-	print(f"  b   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
-	tarmean, tarstd = get_b_with_std(mean, covariance)
-	print(f"  b  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
+# 	arr_pf = torch.as_tensor(results['b'])
+# 	print(f"  b   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
+# 	tarmean, tarstd = get_b_with_std(mean, covariance)
+# 	print(f"  b  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
 	
-	arr_pf = torch.as_tensor(results['c'])
-	print(f"  c   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
-	tarmean, tarstd = get_c_with_std(mean, covariance)
-	print(f"  c  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
+# 	arr_pf = torch.as_tensor(results['c'])
+# 	print(f"  c   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
+# 	tarmean, tarstd = get_c_with_std(mean, covariance)
+# 	print(f"  c  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
 	
-	arr_pf = torch.as_tensor(results['rsa_sq'])
-	print(f"k^2   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
-	tarmean, tarstd = get_relshapeaniso_with_std(mean, covariance)
-	print(f"k^2  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
-	
+# 	arr_pf = torch.as_tensor(results['rsa_sq'])
+# 	print(f"k^2   from value at each time step: {torch.mean(arr_pf).item() : >12.5f} +- {torch.std(arr_pf).item() : >12.5f}")
+# 	tarmean, tarstd = get_relshapeaniso_with_std(mean, covariance)
+# 	print(f"k^2  from mean+-cov of eigenvalues: {tarmean.item() : >12.5f} +- {tarstd.item() : >12.5f}")
+
 
 if __name__ == '__main__':
 	...

@@ -1,6 +1,7 @@
-import numpy as np
-
 from typing import Literal
+import sys
+
+import numpy as np
 
 
 def create_molecule(
@@ -132,14 +133,15 @@ def create_molecule(
 
 
 charge_map_global = {
-		'A': 0,		# atom type 1: aliphatic
-		'B': 0,		# atom type 2: aromatic
-		'C': -1,	# atom type 3: anion
-		'D': +1		# atom type 4: cation
-	}
+	'A': 0,		# atom type 1: aliphatic
+	'B': 0,		# atom type 2: aromatic
+	'C': -1,	# atom type 3: anion
+	'D': +1		# atom type 4: cation
+}
 
 
 if __name__ == '__main__':
-	seq = 'ABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDABABDDABCCBAABBAABCDAB'
+	seq = sys.argv[1]
+	print(seq)
 	create_molecule(seq, charge_map_global, 'mol')
 	create_molecule(seq, charge_map_global, 'data')

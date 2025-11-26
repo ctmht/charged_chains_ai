@@ -69,29 +69,38 @@ def process():
 	ete_autocorrs = post.end_to_end_autocorrelation(end_to_end_vs, maxoffset)
 	tau, cutoff, talpha = post.fit_exponential_decay(X=times, Y=ete_autocorrs)
 	
-	# # PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
-	# from matplotlib import pyplot as plt
-	# squared = True
-	# log = True
-	# if not squared:
-	# 	plt.plot(times, ete_autocorrs,
-	# 	   	color='blue', label="True data")
-	# 	plt.plot(times, torch.exp(-times/tau),
-	# 	   	color='magenta', label="Best fit to true data")
-	# else:
-	# 	plt.plot(times, torch.square(ete_autocorrs),
-	# 	   	color='blue', label="Squared data")
-	# 	plt.plot(times, torch.exp(- 2/tau * times),
-	# 	   	color='magenta', label="Best fit to squared data")
-	# if log and squared:
-	# 	plt.yscale('log')
-	# if not log:
-	# 	plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
+	
+	
+	
+	
+	# PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
+	from matplotlib import pyplot as plt
+	squared = True
+	log = True
+	if not squared:
+		plt.plot(times, ete_autocorrs,
+		   	color='blue', label="True data")
+		plt.plot(times, torch.exp(-times/tau),
+		   	color='magenta', label="Best fit to true data")
+	else:
+		plt.plot(times, torch.square(ete_autocorrs),
+		   	color='blue', label="Squared data")
+		plt.plot(times, torch.exp(- 2/tau * times),
+		   	color='magenta', label="Best fit to squared data")
+	if log and squared:
+		plt.yscale('log')
+	if not log:
+		plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
 	# plt.axhline(atol, xmin=0, xmax=200, ls='-', c='g', label="atol")
-	# plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label="talpha")
-	# plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label="cutoff")
-	# plt.legend()
-	# plt.show()
+	plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label="talpha")
+	plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label="cutoff")
+	plt.legend()
+	plt.show()
+	
+	
+	
+	
+	
 	
 	radgyr_per_fr = torch.as_tensor(radgyr_per_fr)
 	radgyr_per_fr_mean = torch.mean(radgyr_per_fr)
@@ -216,9 +225,40 @@ def process_autocorrelation():
 	# TODO: remove on actual large simulations
 	outfile = os.path.join(script_dir, '9_processed_DUMP.csv')
 	df.to_csv(outfile)
+	
+	
+	# PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
+	from matplotlib import pyplot as plt
+	plt.figure(figsize=(8, 3), layout = 'constrained')
+	squared = True
+	log = True
+	if not squared:
+		plt.plot(times, ete_autocorrs,
+		   	color='blue', label="True data")
+		plt.plot(times, torch.exp(-times/tau),
+		   	color='magenta', label="Best fit to true data")
+	else:
+		plt.plot(times, torch.square(ete_autocorrs),
+		   	color='blue', label="Squared data")
+		plt.plot(times, torch.exp(- 2/tau * times),
+		   	color='magenta', label="Best fit to squared data")
+	if log and squared:
+		plt.yscale('log')
+	if not log:
+		plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
+	# plt.axhline(atol, xmin=0, xmax=200, ls='-', c='g', label="atol")
+	plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label=f"$T_\\alpha = {talpha}$ $(\\alpha = 0.95)$")
+	plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label=f"$cutoff = {cutoff}$")
+	plt.legend()
+	plt.xlim([0, 100])
+	plt.ylim([0, torch.exp(- 2/tau * 0)])
+	plt.xlabel('Simulation dump step (every $1000dt$)')
+	plt.ylabel('Autocorrelation')
+	plt.savefig('autocorr_sqlog.pdf')
+	plt.show()
 
 	
 
 
 if __name__ == '__main__':
-	process_autocorrelation()
+	process()
