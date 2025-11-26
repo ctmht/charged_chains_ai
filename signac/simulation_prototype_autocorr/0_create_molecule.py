@@ -66,22 +66,22 @@ def create_molecule(
 			f.write(f'{chain_length} atoms\n')
 			f.write(f'{chain_length - 1} bonds\n')
 			
-			f.write('\n# Atom types: [atomID] [typeID]')
+			# f.write('\n# Atom types: [atomID] [typeID]')
 			f.write('\nTypes\n\n')
 			for idx, type in enumerate(atom_types):
 				f.write(f'{idx + 1 :<5} {type}\n')
 			
-			f.write('\n# Coordinates: [atomID] [x] [y] [z]')
+			# f.write('\n# Coordinates: [atomID] [x] [y] [z]')
 			f.write('\nCoords\n\n')
 			for idx, pos in enumerate(atom_coords):
 				f.write(f'{idx + 1 :<5} {pos :<7.5f} {0} {0}\n')
 						
-			f.write('\n# Charges: [atomID] [charge]')
+			# f.write('\n# Charges: [atomID] [charge]')
 			f.write('\nCharges\n\n')
 			for idx, charge in enumerate(atom_charges):
 				f.write(f'{idx + 1 :<5} {charge :>5.1f}\n')
 			
-			f.write('\n# Bonds: [bondID] [bondtypeID] [atom1ID] [atom2ID]')
+			# f.write('\n# Bonds: [bondID] [bondtypeID] [atom1ID] [atom2ID]')
 			f.write('\nBonds\n\n')
 			for idx, (at1, at2) in enumerate(zip(bond_at1, bond_at1 + 1)):
 				f.write(f'{idx + 1 :<5} {1 :<5} {at1 :<5} {at2 :<5}\n')
