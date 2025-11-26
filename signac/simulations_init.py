@@ -12,7 +12,10 @@ print(SIGNAC_FOLDER)
 simman = SimulationsManager(path = SIGNAC_FOLDER)
 simman.init_project(path = SIGNAC_FOLDER)
 
+# for job in simman:
+# 	job.remove()
+
 for taskname in ["autocorr", "full"]:
 	dfpath = os.path.join(DATA_FOLDER, f"{taskname}_dataframe.pkl")
-	simman.create_jobs(taskname, dfpath)
+	simman.create_jobs_simulations(taskname, dfpath)
 	# simman.create_jobs_mltraining(dfpath)

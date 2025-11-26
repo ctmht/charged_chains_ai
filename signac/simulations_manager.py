@@ -1,4 +1,5 @@
 from typing import Literal
+import shutil
 import os
 
 from flow import FlowProject
@@ -44,7 +45,20 @@ class SimulationsManager(FlowProject):
             job = self.open_job(statepoint)
             
             if job not in self:
+                # Initialize job
                 job.init()
+                
+                # Copy task-specific template folder into the job's workspace
+                jpp = os.path.abspath(job.project.path)
+                template_fld = os.path.join(jpp, f"simulation_prototype_{taskname}")
+                job_dest_fld = job.path
+                
+                for f in os.listdir(template_fld):
+                    if os.path.isfile(os.path.join(template_fld, f)):
+                        template_filepath = os.path.join(template_fld, f)
+                        target_filepath = os.path.join(job_dest_fld, f)
+                        
+                        shutil.copyfile(template_filepath, target_filepath)
     
     
     def create_jobs_mltraining(

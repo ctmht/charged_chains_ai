@@ -45,8 +45,8 @@ def run_simulation(job):
 
     lj_cutoff              = job.sp.lj_cutoff
     lammps_script_location = job.project.path + '/scripts/in.single_chain'
-
-    command_to_run = f'srun lmp -screen out.lammps -in {lammps_script_location} -v lj_cutoff {lj_cutoff}'
+    
+    command_to_run = f'module load LAMMPS/23Jun2022-foss-2021b-kokkos && srun lmp -screen out.lammps -in {lammps_script_location} -v lj_cutoff {lj_cutoff}'
 
     return(command_to_run)
 
