@@ -50,7 +50,7 @@ class SimulationsManager(FlowProject):
                 
                 # Copy task-specific template folder into the job's workspace
                 jpp = os.path.abspath(job.project.path)
-                template_fld = os.path.join(jpp, f"simulation_prototype_{taskname}")
+                template_fld = os.path.join(jpp, f"simulation_prototype")
                 job_dest_fld = job.path
                 
                 for f in os.listdir(template_fld):
@@ -134,14 +134,6 @@ def create_lammps_simulation(
     """
     Run LAMMPS script to create the environment
     """
-    # # Find LAMMPS creation script and run
-    # jpp = os.path.abspath(job.project.path)
-    # create_env_fname = f"simulation_prototype_{job.sp.taskname}/2_LAMMPS_creation.in"
-    # lammps_script_location = os.path.join(jpp, create_env_fname)
-    
-    # # Set up shell command to run script
-    # command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
-    
     # Find bash script for running this step
     jpp = os.path.abspath(job.path)
     bash_script_location = os.path.join(jpp, "runscript_2.sh")
@@ -160,13 +152,6 @@ def run_simulation(
     """
     Run LAMMPS script to simulate polymer assembly
     """
-    # # Find (energy minimization and) running script
-    # jpp = os.path.abspath(job.project.path)
-    # create_env_fname = f"simulation_prototype_{job.sp.taskname}/4_LAMMPS_mnr.in"
-    # lammps_script_location = os.path.join(jpp, create_env_fname)
-    
-    # # Set up shell command to run script
-    # command_to_run = f"srun lmp -screen out.lammps -in {lammps_script_location}"
     
     # Find bash script for running this step
     jpp = os.path.abspath(job.path)
@@ -188,12 +173,12 @@ def run_postprocessing(
     """
     # Find postprocessing script
     jpp = os.path.abspath(job.project.path)
-    postprocess_fname = f"simulation_prototype_{job.sp.taskname}/8_postprocessing.py"
+    postprocess_fname = f"8_postprocessing.py"
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
-    command_to_run = f"python {python_script_location}"
-    print(f"\nrunning 8_postprocessing.py on job id {job.id} to postprocess results\n")
+    command_to_run = f"python {python_script_location} {job.taskname}"
+    print(f"\nrunning 8_postprocessing.py {job.taskname} on job id {job.id} to postprocess results\n")
 
     return command_to_run
 
