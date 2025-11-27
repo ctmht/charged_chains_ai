@@ -172,7 +172,7 @@ def run_postprocessing(
     Run Python postprocessing script
     """
     # Find postprocessing script
-    jpp = os.path.abspath(job.project.path)
+    jpp = os.path.abspath(job.path)
     postprocess_fname = f"8_postprocessing.py"
     python_script_location = os.path.join(jpp, postprocess_fname)
     
