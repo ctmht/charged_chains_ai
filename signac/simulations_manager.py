@@ -177,8 +177,8 @@ def run_postprocessing(
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
-    command_to_run = f"python {python_script_location} {job.taskname}"
-    print(f"\nrunning 8_postprocessing.py {job.taskname} on job id {job.id} to postprocess results\n")
+    command_to_run = f"python {python_script_location} {job.sp.taskname}"
+    print(f"\nrunning 8_postprocessing.py {job.sp.taskname} on job id {job.id} to postprocess results\n")
 
     return command_to_run
 
