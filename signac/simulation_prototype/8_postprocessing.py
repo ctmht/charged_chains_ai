@@ -289,17 +289,16 @@ def process_full_analysis():
 	# TODO: implement neighbourhood monomer proportions
 	"""
 	dt_integration = 0.005
-	script_dir = os.path.dirname(os.path.abspath(__file__))
-	topology = os.path.join(script_dir, '7_assembled.data')
-	trajectory = os.path.join(script_dir, '6_b_trajlin.data')
+	topology = '7_assembled.data'
+	trajectory = '6_b_trajlin.data'
 	universe = load(topology, trajectory, dt_integration)
 	
-	polymer_file = os.path.join(script_dir, '1_polymer.mol')
+	polymer_file = '1_polymer.mol'
 	with open(polymer_file, 'r') as polf:
 		_ = next(polf)
 		seq = next(polf)[2:]
 	
-	outfile = os.path.join(script_dir, '9_processed.pkl')
+	outfile = '9_processed.pkl'
 	
 	gyr_eigenvals = []
 	end_to_end_vs = []
@@ -433,20 +432,19 @@ def process_autocorrelation():
 	"""
 	# Define inputs and load universe
 	dt_integration = 0.005
-	script_dir = os.path.dirname(os.path.abspath(__file__))
-	topology = os.path.join(script_dir, '7_assembled.data')
-	trajectory = os.path.join(script_dir, '6_b_trajlin.data')
+	topology = '7_assembled.data'
+	trajectory = '6_b_trajlin.data'
 	universe = load(topology, trajectory, dt_integration)
 	
 	# Extract monomer sequence from molecule file
-	polymer_file = os.path.join(script_dir, '1_polymer.mol')
+	polymer_file = '1_polymer.mol'
 	with open(polymer_file, 'r') as polf:
 		_ = next(polf)
 		seq = next(polf)[2:]
 	
 	
 	# Define output file
-	outfile = os.path.join(script_dir, '9_processed.pkl')
+	outfile = '9_processed.pkl'
 	
 	# Get end-to-end distance vector at each frame
 	end_to_end_vs = []
@@ -482,7 +480,7 @@ def process_autocorrelation():
 	df.to_pickle(outfile)
 	
 	# TODO: remove on actual large simulations
-	outfile = os.path.join(script_dir, '9_processed_DUMP.csv')
+	outfile = '9_processed_DUMP.csv'
 	df.to_csv(outfile)
 	
 	"""
