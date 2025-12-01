@@ -341,10 +341,10 @@ if __name__ == '__main__':
 	TEMP = 10
 	
 	AUTOCORR_DATASET_SEED = 42
-	AUTOCORR_DATASET_SIZE = 3 # 10 ** 3
+	AUTOCORR_DATASET_SIZE = 50 # 10 ** 3
 	
 	FULL_DATASET_SEED = 67
-	FULL_DATASET_SIZE = 4 # 10 ** 4
+	FULL_DATASET_SIZE = 0 # 10 ** 4
 	
 	
 	# Create the distribution of sequences, with reversal symmetry and temperature-based flattening

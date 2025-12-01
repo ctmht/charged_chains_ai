@@ -8,7 +8,7 @@ from simulations_manager import SimulationsManager
 
 REPLACE = False
 try:
-    if sys.argv[1] == 1:
+    if sys.argv[1]:
         REPLACE = True
         print(f"Results of this run will replace old ones ({REPLACE=})")
 except:
