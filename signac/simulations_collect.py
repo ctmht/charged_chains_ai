@@ -10,9 +10,9 @@ REPLACE = False
 try:
     if sys.argv[1] == 1:
         REPLACE = True
+        print(f"Results of this run will replace old ones ({REPLACE=})")
 except:
     pass
-print(f"Results of this run will replace old ones ({REPLACE=})")
 
 
 DATA_FOLDER = os.path.abspath("./data/")
