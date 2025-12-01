@@ -1,8 +1,18 @@
+import sys
 import os
 
 import pandas as pd
 
 from simulations_manager import SimulationsManager
+
+
+REPLACE = False
+try:
+    if sys.argv[1] == 1:
+        REPLACE = True
+except:
+    pass
+print(f"Results of this run will replace old ones ({REPLACE=})")
 
 
 DATA_FOLDER = os.path.abspath("./data/")
@@ -44,7 +54,7 @@ for taskname, job_dfs in results_by_task.items():
         output_path = os.path.join(DATA_FOLDER, f"{taskname}_results.pkl")
         
         # Load existing results if they exist
-        if os.path.exists(output_path):
+        if os.path.exists(output_path) and not REPLACE:
             existing_df = pd.read_pickle(output_path)
             # Combine existing and new results, removing duplicates by job_id
             final_df = pd.concat([existing_df, combined_df], ignore_index=True)

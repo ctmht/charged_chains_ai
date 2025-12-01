@@ -26,6 +26,7 @@ def analyze_autocorr_results(
 	log = True
 	
 	for idx, row in df.iterrows():
+		idx -= 3
 		autocorr = row["end_to_end_autocorrs"]
 		if squared: autocorr = torch.square(autocorr)
 		
@@ -75,7 +76,7 @@ def analyze_full_results(
 
 
 if __name__ == '__main__':
-	DATA_FOLDER = os.path.abspath("./data/")
+	DATA_FOLDER = os.path.abspath("./data/data/")
 	FIGURES_FOLDER = os.path.abspath("./figures/")
 	
 	for taskname in ["autocorr", "full"]:

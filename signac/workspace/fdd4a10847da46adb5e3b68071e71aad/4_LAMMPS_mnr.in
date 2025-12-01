@@ -82,7 +82,7 @@ pair_coeff		3 4 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
 pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 
 
-fix             noDrift 	all momentum 10 linear 1 1 1
+fix             noDriftRot 	all momentum 10 linear 1 1 1 angular
 fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
 
 # dump          assemble 	all custom 1000 				${outputfile_selfasb} id type xu yu zu vx vy vz
