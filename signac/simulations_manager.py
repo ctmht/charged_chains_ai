@@ -123,9 +123,10 @@ def create_polymer(
     
     # Set up shell command to run script
     sequence = job.sp.sequence
-    load_conda_env = "module load Anaconda3/2023.03-1\nconda activate myenv\n"
+    load_conda_env = "module load Anaconda3/2023.03-1"
+    activate_conda_env = "conda activate myenv"
     run_py_script = f"python {python_script_location} {sequence}"
-    command_to_run = load_conda_env + run_py_script
+    command_to_run = load_conda_env + '\n' + activate_conda_env + '\n' + run_py_script
     
     print(f"signac job {job.id[:7]}..: Running '0_create_molecule.py' to generate a "
           f"chain with sequence '{sequence}'")
@@ -146,10 +147,12 @@ def create_lammps_simulation(
     jpp = os.path.abspath(job.path)
     bash_script_location = os.path.join(jpp, "runscript_2.sh")
     
-    command_to_run = f"bash {bash_script_location}"
+    load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
+    run_creation = "lmp -in 2_LAMMPS_creation.in"
+    command_to_run = load_lammps + '\n' + run_creation
     
     sequence = job.sp.sequence
-    print(f"signac job {job.id[:7]}..: Running 'runscript2.sh' to create the LAMMPS "
+    print(f"signac job {job.id[:7]}..: Running '2_LAMMPS_creation' to create the LAMMPS "
           f"environment for sequence '{sequence}'")
     
     return command_to_run
@@ -167,13 +170,16 @@ def run_simulation(
     
     # Find bash script for running this step
     jpp = os.path.abspath(job.path)
-    bash_script_location = os.path.join(jpp, "runscript_4.sh")
+    bash_script_location = os.path.join(jpp, f"runscript_4_{job.sp.taskname}.sh")
     
-    command_to_run = f"bash {bash_script_location}"
+    # lmp -in 4_LAMMPS_mnr.in
+    load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
+    run_creation = f"lmp -in 4_LAMMPS_mnr_{job.sp.taskname}.in"
+    command_to_run = load_lammps + '\n' + run_creation
     
     sequence = job.sp.sequence
-    print(f"signac job {job.id[:7]}..: Running 'runscript4.sh' to run the simulation "
-          f" for sequence '{sequence}'")
+    print(f"signac job {job.id[:7]}..: Running '4_LAMMPS_mnr_{job.sp.taskname}' to run the "
+          f"simulation for sequence '{sequence}'")
     
     return command_to_run
 
@@ -193,9 +199,10 @@ def run_postprocessing(
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
-    load_conda_env = "module load Anaconda3/2023.03-1\nconda activate myenv\n"
+    load_conda_env = "module load Anaconda3/2023.03-1"
+    activate_conda_env = "conda activate myenv"
     run_py_script = f"python {python_script_location} {job.sp.taskname}"
-    command_to_run = load_conda_env + run_py_script
+    command_to_run = load_conda_env + '\n' + activate_conda_env + '\n' + run_py_script
     
     print(f"signac job {job.id[:7]}..: Running `8_postprocessing.py {job.sp.taskname}' "
           f"to postprocess results")
