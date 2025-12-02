@@ -55,6 +55,11 @@ class SimulationsManager(FlowProject):
                 
                 for f in os.listdir(template_fld):
                     if os.path.isfile(os.path.join(template_fld, f)):
+                        # Only copy the task-specific LAMMPS script:
+                        # 4_LAMMPS_mnr_autocorr.in or 4_LAMMPS_mnr_full.in
+                        if f[0] == '4' and taskname not in f:
+                            continue
+                        
                         template_filepath = os.path.join(template_fld, f)
                         target_filepath = os.path.join(job_dest_fld, f)
                         
@@ -118,10 +123,13 @@ def create_polymer(
     
     # Set up shell command to run script
     sequence = job.sp.sequence
-    command_to_run = f"python {python_script_location} {sequence}"
+    load_conda_env = "module load Anaconda3/2023.03-1\nconda activate myenv\n"
+    run_py_script = f"python {python_script_location} {sequence}"
+    command_to_run = load_conda_env + run_py_script
     
-    print(f"\nRunning '0_create_molecule.py' on job id '{job.id}' to generate a chain with sequence '{sequence}'\n")
-
+    print(f"signac job {job.id[:7]}..: Running '0_create_molecule.py' to generate a "
+          f"chain with sequence '{sequence}'")
+    
     return command_to_run
 
 
@@ -139,6 +147,10 @@ def create_lammps_simulation(
     bash_script_location = os.path.join(jpp, "runscript_2.sh")
     
     command_to_run = f"bash {bash_script_location}"
+    
+    sequence = job.sp.sequence
+    print(f"signac job {job.id[:7]}..: Running 'runscript2.sh' to create the LAMMPS "
+          f"environment for sequence '{sequence}'")
     
     return command_to_run
 
@@ -159,6 +171,10 @@ def run_simulation(
     
     command_to_run = f"bash {bash_script_location}"
     
+    sequence = job.sp.sequence
+    print(f"signac job {job.id[:7]}..: Running 'runscript4.sh' to run the simulation "
+          f" for sequence '{sequence}'")
+    
     return command_to_run
 
 
@@ -177,8 +193,12 @@ def run_postprocessing(
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
-    command_to_run = f"python {python_script_location} {job.sp.taskname}"
-    print(f"\nrunning 8_postprocessing.py {job.sp.taskname} on job id {job.id} to postprocess results\n")
+    load_conda_env = "module load Anaconda3/2023.03-1\nconda activate myenv\n"
+    run_py_script = f"python {python_script_location} {job.sp.taskname}"
+    command_to_run = load_conda_env + run_py_script
+    
+    print(f"signac job {job.id[:7]}..: Running `8_postprocessing.py {job.sp.taskname}' "
+          f"to postprocess results")
 
     return command_to_run
 
@@ -197,6 +217,8 @@ def run_postprocessing(
 
 
 if __name__=="__main__":
-    simman = SimulationsManager('signac')
+    usedpath = os.path.dirname(os.path.abspath(__file__))
+    print("Directory absolute path:", usedpath)
+    simman = SimulationsManager(usedpath)
     simman.main()
     

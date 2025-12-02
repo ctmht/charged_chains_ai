@@ -448,33 +448,49 @@ def process_autocorrelation():
 	
 	# Get end-to-end distance vector at each frame
 	end_to_end_vs = []
+	
+	printed = False
 	for frame in universe.trajectory:
+		if not printed:
+			print(f"{frame}\n{frame.time=}\n{frame.dt=}")
+			printed = True
+		
 		positions = frame.positions
 		
 		end_to_end = end_to_end_distance(positions)
 		end_to_end_vs.append(end_to_end)
 	
-	# Autocorrelation analysis
-	maxoffset = 200
-	times = torch.arange(0, maxoffset, 1)
-	ete_autocorrs = end_to_end_autocorrelation(end_to_end_vs, maxoffset)
-	tau, cutoff, talpha = fit_exponential_decay(X=times, Y=ete_autocorrs)
+	# Parameters
+	maxlag = 200   		# number of lags to compute autocorrelation for
+	alpha = 0.95		# quantile for cutoff in the exponential fit
+	atol = 1e-5			# absolute tolerance for nonmonotonicity
 	
-	# Convert the determined talpha to actual simulation time and number of steps
-	talpha_st = talpha * (universe.trajectory[1].time - universe.trajectory[0].time)
-	talpha_ss = talpha_st / dt_integration
+	# Autocorrelation analysis
+	lags = torch.arange(0, maxlag, 1)
+	ete_autocorrs = end_to_end_autocorrelation(end_to_end_vs, maxlag)
+	decay_factor, nonmon_cutoff, quant_cutoff = fit_exponential_decay(
+		X = lags, Y = ete_autocorrs,
+		alpha = 0.95, atol = 1e-5
+	)
+	
+	# Convert the determined lag_cutoff to actual simulation time and number of steps
+	timediff = universe.trajectory[1].time - universe.trajectory[0].time
+	lagstep_cutoff_simtime = quant_cutoff * timediff
+	lagstep_cutoff_simsteps = lagstep_cutoff_simtime / dt_integration
 	
 	# Saving results
 	results = dict(
 		sequence = [seq],
 		end_to_end = [end_to_end_vs],
-		maxoffset_autocorrs = [maxoffset],
+		maxoffset_autocorrs = [maxlag],
 		end_to_end_autocorrs = [ete_autocorrs],
-		tau = [tau],
-		cutoff = [cutoff],
-		talpha_unconv = [talpha],
-		talpha_simtime = [talpha_st],
-		talpha_simsteps = [talpha_ss]
+		atol = [atol],
+		alpha = [alpha],
+		tau = [decay_factor],
+		cutoff = [nonmon_cutoff],
+		talpha_unconv = [quant_cutoff],
+		talpha_simtime = [lagstep_cutoff_simtime],
+		talpha_simsteps = [lagstep_cutoff_simsteps]
 	)
 	df = pd.DataFrame(results)
 	df.to_pickle(outfile)

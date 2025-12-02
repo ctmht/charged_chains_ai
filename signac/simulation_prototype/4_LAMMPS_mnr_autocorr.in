@@ -1,0 +1,95 @@
+
+
+variable        runtime equal 1000000
+variable		subsample_rate equal 1000
+
+variable		outputfile_created string '3_created.data'
+variable		outputfile_relaxed string '5_relaxed.data'
+variable		outputfile_selfasb string '6_a_self_assemble.lammpstrj'
+variable		outputfile_trajlin string '6_b_trajlin.data'
+variable		outputfile_assembled string '7_assembled.data'
+
+units           lj
+atom_style      full
+dimension       3
+boundary        p p p
+timestep        0.005
+
+read_data       ${outputfile_created}
+
+bond_style      fene
+bond_coeff      * 30.0 1.5 1.0 1.0
+special_bonds   fene
+
+variable        Temp equal 1.0
+variable        velSeed equal 926458
+
+velocity        all create ${Temp} ${velSeed}
+
+### Output
+thermo_style    custom step temp density press etotal pe ke epair spcpu
+thermo          1000
+
+###########################################################################
+# Soft relaxation (to remove overlaps of particles)
+######################################################################
+
+pair_style      soft 1.0
+pair_coeff      * * 0.0
+variable        prefactor equal ramp(0,300)
+fix             rampSoft all adapt 1 pair soft a * * v_prefactor
+
+minimize        0.0 1.0e-8 1000 100000
+
+fix             nvtSoft all nvt temp ${Temp} ${Temp} 0.5
+run             100000
+unfix           nvtSoft
+unfix           rampSoft
+reset_timestep  0
+
+write_data      ${outputfile_relaxed}
+
+###########################################################################
+# Full LJ with Coulomb
+######################################################################
+
+# Cutoffs and parameters:
+# - Values: Marcel Verkade's Bachelor Thesis
+# - Mapping to atom groups: Patrick Onck's paper
+# - 1: aliphatic, 2: aromatic, 3: anion, 4: cation
+# pair_style	lj/cut/coul/cut <lj_cut_global> <coul_cut_global>
+# pair_coeff	<type_1>  <type_2>  <eps>  <sigma>  <r_cut_lj>  <r_cut_coul>
+
+# Problem: Onck's model is much more complex, and Marcel has no sigma reported
+# Using sigma=1 randomly
+
+variable		glob_ljeps equal 1.0
+variable		glob_ljsig 	equal 1.0
+variable		glob_coulcut equal 10.0
+variable		att_ljcut equal 2.50
+variable		rep_ljcut equal 1.12
+
+pair_style		lj/cut/coul/cut 						${att_ljcut} 	${glob_coulcut}
+pair_coeff		1 1 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
+pair_coeff		1 2 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
+pair_coeff		1 3 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
+pair_coeff		1 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
+pair_coeff		2 2 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
+pair_coeff		2 3 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
+pair_coeff		2 4 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
+pair_coeff		3 3 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
+pair_coeff		3 4 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
+pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
+
+
+fix             noDriftRot 	all momentum 10 linear 1 1 1 angular
+fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
+
+compute 		molPotEng	all pe
+
+dump            lindump 	all custom ${subsample_rate} 	${outputfile_trajlin} id type xu yu zu vx vy vz c_molPotEng
+
+run             ${runtime}
+
+write_data      ${outputfile_assembled} nofix nocoeff
+
