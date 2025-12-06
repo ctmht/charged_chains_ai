@@ -6,3 +6,4 @@ freud
 MDAnalysis
 torch
 scipy
+lammps-logfile

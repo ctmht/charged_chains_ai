@@ -26,10 +26,6 @@ variable        velSeed equal 926458
 
 velocity        all create ${Temp} ${velSeed}
 
-### Output
-thermo_style    custom step temp density press etotal pe ke epair spcpu
-thermo          1000
-
 ###########################################################################
 # Soft relaxation (to remove overlaps of particles)
 ######################################################################
@@ -42,7 +38,9 @@ fix             rampSoft all adapt 1 pair soft a * * v_prefactor
 minimize        0.0 1.0e-8 1000 100000
 
 fix             nvtSoft all nvt temp ${Temp} ${Temp} 0.5
+
 run             100000
+
 unfix           nvtSoft
 unfix           rampSoft
 reset_timestep  0
@@ -60,8 +58,6 @@ write_data      ${outputfile_relaxed}
 # pair_style	lj/cut/coul/cut <lj_cut_global> <coul_cut_global>
 # pair_coeff	<type_1>  <type_2>  <eps>  <sigma>  <r_cut_lj>  <r_cut_coul>
 
-# Problem: Onck's model is much more complex, and Marcel has no sigma reported
-# Using sigma=1 randomly
 
 variable		glob_ljeps equal 1.0
 variable		glob_ljsig 	equal 1.0
@@ -82,12 +78,18 @@ pair_coeff		3 4 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
 pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 
 
+### Fix (linear and angular) momentum and NVT
 fix             noDriftRot 	all momentum 10 linear 1 1 1 angular
 fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
 
 compute 		molPotEng	all pe
 
-dump            lindump 	all custom ${subsample_rate} 	${outputfile_trajlin} id type xu yu zu vx vy vz c_molPotEng
+### Output
+dump            lindump 	all custom ${subsample_rate} 	${outputfile_trajlin} id type xu yu zu vx vy vz
+# dump			potEngLd	c_molPotEng
+
+thermo_style    custom step temp density press etotal pe ke epair spcpu
+thermo          ${subsample_rate}
 
 run             ${runtime}
 

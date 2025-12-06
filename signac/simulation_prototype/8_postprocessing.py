@@ -5,6 +5,7 @@ import os
 
 # import freud  				# advanced analysis of molecular dynamics and other simulations
 import MDAnalysis as mda  	# manipulate and analyse molecular dynamics trajectories
+import lammps_logfile
 import pandas as pd
 import numpy as np
 import torch
@@ -285,11 +286,12 @@ def load(
 
 def process_full_analysis():
 	r"""
-	# TODO: test that error propagation is indeed fine enough before a full simulation run
+	# TODO: test that error propagation is indeed fine enough before full simulation runs
 	# TODO: implement neighbourhood monomer proportions
 	"""
 	dt_integration = 0.005
 	topology = '7_assembled.data'
+	
 	trajectory = '6_b_trajlin.data'
 	universe = load(topology, trajectory, dt_integration)
 	
@@ -332,41 +334,7 @@ def process_full_analysis():
 		acylin_per_fr.append(acylindricity)
 		relsha_per_fr.append(relshapeaniso)
 	
-	"""
-	# Autocorrelation analysis
-	maxoffset = 200
-	times = torch.arange(0, maxoffset, 1)
-	ete_autocorrs = end_to_end_autocorrelation(end_to_end_vs, maxoffset)
-	tau, cutoff, talpha = fit_exponential_decay(X=times, Y=ete_autocorrs)
-	"""
-	
-	"""
-	# PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
-	from matplotlib import pyplot as plt
-	squared = True
-	log = True
-	if not squared:
-		plt.plot(times, ete_autocorrs,
-		   	color='blue', label="True data")
-		plt.plot(times, torch.exp(-times/tau),
-		   	color='magenta', label="Best fit to true data")
-	else:
-		plt.plot(times, torch.square(ete_autocorrs),
-		   	color='blue', label="Squared data")
-		plt.plot(times, torch.exp(- 2/tau * times),
-		   	color='magenta', label="Best fit to squared data")
-	if log and squared:
-		plt.yscale('log')
-	if not log:
-		plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
-	# plt.axhline(atol, xmin=0, xmax=200, ls='-', c='g', label="atol")
-	plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label="talpha")
-	plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label="cutoff")
-	plt.legend()
-	plt.show()
-	"""
-	
-	# Iterative mean and variance
+	# Iterative mean and variance TODO: remove after check
 	radgyr_per_fr = torch.as_tensor(radgyr_per_fr)
 	radgyr_per_fr_mean = torch.mean(radgyr_per_fr)
 	radgyr_per_fr_var = torch.var(radgyr_per_fr)
@@ -383,25 +351,37 @@ def process_full_analysis():
 	# Mean and covariance matrix of (decreasingly) ordered eigenvalues
 	mean, cov = mean_covariance(gyr_eigenvals)
 	
-	# Gyration tensor eigenvalue derived quantities, computed by error propagation
+	# Gyration tensor eigenvalue derived quantities, computed by error propagation TODO: remove if errprop okay
 	prop_rad_gyr = expectation_variance(radius_of_gyration, mean, cov)
 	prop_asphericity = expectation_variance(asphericity, mean, cov)
 	prop_acylindricity = expectation_variance(acylindricity, mean, cov)
 	prop_relshapeaniso = expectation_variance(rel_shape_anisotropy, mean, cov)
 	
+	# Potential energy getter
+	NONMIN_RUN = 2
+	logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), '6_a_log.lammps')
+	logged_data = lammps_logfile.File(logfile)
+	
+	# There are two runs in the LAMMPS simulation, first (1) for minimization and second (2) full
+	# NOT zero-indexed in the lammps_logfile library
+	pot_eng = logged_data.get("PotEng", run_num = 2)
+	
+	meanpe = np.mean(pot_eng)
+	varpe = np.var(pot_eng)
+	
+	# Saving results
 	results = dict(
+		# TODO: optimize these
 		sequence = [seq],
 		
 		maxtime = [universe.trajectory[-1].time],
 		
 		gyr_tensor_eigenvalues = [torch.stack(gyr_eigenvals, dim = 0)],
 		
-		end_to_end_vectors = [torch.stack(end_to_end_vs, dim = 0)],
-		# end_to_end_autocorrelations = [ete_autocorrs],
-		
 		mean_eigenvalues = [mean],
 		covariance_eigenvalues = [cov],
 		
+		# TODO: remove after check
 		R_g_perfm = [radgyr_per_fr_mean],
 		R_g_perfv = [radgyr_per_fr_var],
 		R_g_propm = [prop_rad_gyr[0]],
@@ -417,11 +397,12 @@ def process_full_analysis():
 		kappa2_perfm = [relsha_per_fr_mean],
 		kappa2_perfv = [relsha_per_fr_var],
 		kappa2_propm = [prop_relshapeaniso[0]],
-		kappa2_propv = [prop_relshapeaniso[1]]
+		kappa2_propv = [prop_relshapeaniso[1]],
+		
+		PE_mean = [meanpe],
+		PE_var = [varpe]
 	)
-	
 	df = pd.DataFrame(results)
-	
 	df.to_pickle(outfile)
 
 
@@ -468,14 +449,14 @@ def process_autocorrelation():
 	# Autocorrelation analysis
 	lags = torch.arange(0, maxlag, 1)
 	ete_autocorrs = end_to_end_autocorrelation(end_to_end_vs, maxlag)
-	decay_factor, nonmon_cutoff, quant_cutoff = fit_exponential_decay(
+	decay_factor, nonmon_cutoff, quantile_cutoff = fit_exponential_decay(
 		X = lags, Y = ete_autocorrs,
 		alpha = 0.95, atol = 1e-5
 	)
 	
 	# Convert the determined lag_cutoff to actual simulation time and number of steps
 	timediff = universe.trajectory[1].time - universe.trajectory[0].time
-	lagstep_cutoff_simtime = quant_cutoff * timediff
+	lagstep_cutoff_simtime = quantile_cutoff * timediff
 	lagstep_cutoff_simsteps = lagstep_cutoff_simtime / dt_integration
 	
 	# Saving results
@@ -488,57 +469,24 @@ def process_autocorrelation():
 		alpha = [alpha],
 		tau = [decay_factor],
 		cutoff = [nonmon_cutoff],
-		talpha_unconv = [quant_cutoff],
+		talpha_unconv = [quantile_cutoff],
 		talpha_simtime = [lagstep_cutoff_simtime],
 		talpha_simsteps = [lagstep_cutoff_simsteps]
 	)
 	df = pd.DataFrame(results)
 	df.to_pickle(outfile)
-	
-	# TODO: remove on actual large simulations
-	outfile = '9_processed_DUMP.csv'
-	df.to_csv(outfile)
-	
-	"""
-	# PLOT AUTOCORRELATION AND EXPONENTIAL DECAY FITS
-	from matplotlib import pyplot as plt
-	plt.figure(figsize=(8, 3), layout = 'constrained')
-	squared = True
-	log = True
-	if not squared:
-		plt.plot(times, ete_autocorrs,
-		   	color='blue', label="True data")
-		plt.plot(times, torch.exp(-times/tau),
-		   	color='magenta', label="Best fit to true data")
-	else:
-		plt.plot(times, torch.square(ete_autocorrs),
-		   	color='blue', label="Squared data")
-		plt.plot(times, torch.exp(- 2/tau * times),
-		   	color='magenta', label="Best fit to squared data")
-	if log and squared:
-		plt.yscale('log')
-	if not log:
-		plt.plot(ete_autocorrs.diff(), ls='-', color='orange', label="Cumdiff of data")
-	# plt.axhline(atol, xmin=0, xmax=200, ls='-', c='g', label="atol")
-	plt.axvline(talpha, ymin=0, ymax=1, ls='-.', c='k', label=f"$T_\\alpha = {talpha}$ $(\\alpha = 0.95)$")
-	plt.axvline(cutoff, ymin=0, ymax=1, ls='--', c='r', label=f"$cutoff = {cutoff}$")
-	plt.legend()
-	plt.xlim([0, 100])
-	plt.ylim([0, torch.exp(- 2/tau * 0)])
-	plt.xlabel('Simulation dump step (every $1000dt$)')
-	plt.ylabel('Autocorrelation')
-	plt.savefig('autocorr_sqlog.pdf')
-	plt.show()
-	"""
-
-	
 
 
 if __name__ == '__main__':
-	taskname: Literal["autocorr", "full"] = sys.argv[1]
-	print(taskname)
+	taskname = "_TEST"
+	if len(sys.argv) > 1:
+		taskname: Literal["autocorr", "full"] = sys.argv[1]
+		print("Run script with task", taskname)
 	
-	if taskname == "autocorr":
-		process_autocorrelation()
-	else:
-		process_full_analysis()
+	match taskname:
+		case "autocorr":
+			process_autocorrelation()
+		case "full":
+			process_full_analysis()
+		case "_TEST" | _:
+			...

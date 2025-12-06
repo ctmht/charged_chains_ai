@@ -117,7 +117,7 @@ def create_polymer(
     """
     Create a polymer with the sequence given by this job
     """
-    # Find molecule file creation script
+    # Find Python script for molecule file creation
     jpp = os.path.abspath(job.path)
     python_script_location = os.path.join(jpp, "0_create_molecule.py")
     
@@ -143,13 +143,15 @@ def create_lammps_simulation(
     """
     Run LAMMPS script to create the environment
     """
-    # Find bash script for running this step
+    # Find LAMMPS script for creating the environment from the molecule file
     jpp = os.path.abspath(job.path)
-    bash_script_location = os.path.join(jpp, "runscript_2.sh")
+    lammps_script_location = os.path.join(jpp, "2_LAMMPS_creation.in")
     
+    # Set up shell command to run script
     load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
-    run_creation = "lmp -in 2_LAMMPS_creation.in"
-    command_to_run = load_lammps + '\n' + run_creation
+    run_creation = f"lmp -in {lammps_script_location}"
+    lammps_flags = "-log 6_a_log.lammps"
+    command_to_run = load_lammps + '\n' + run_creation + ' ' + lammps_flags
     
     sequence = job.sp.sequence
     print(f"signac job {job.id[:7]}..: Running '2_LAMMPS_creation' to create the LAMMPS "
@@ -167,15 +169,15 @@ def run_simulation(
     """
     Run LAMMPS script to simulate polymer assembly
     """
-    
-    # Find bash script for running this step
+    # Find LAMMPS script for running minimization procedure and the simulation
     jpp = os.path.abspath(job.path)
-    bash_script_location = os.path.join(jpp, f"runscript_4_{job.sp.taskname}.sh")
+    lammps_script_location = os.path.join(jpp, f"4_LAMMPS_mnr_{job.sp.taskname}.in")
     
-    # lmp -in 4_LAMMPS_mnr.in
+    # Set up shell command to run script
     load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
-    run_creation = f"lmp -in 4_LAMMPS_mnr_{job.sp.taskname}.in"
-    command_to_run = load_lammps + '\n' + run_creation
+    run_simulation = f"lmp -in {lammps_script_location}"
+    lammps_flags = "-log 6_a_log.lammps"
+    command_to_run = load_lammps + '\n' + run_simulation + ' ' + lammps_flags
     
     sequence = job.sp.sequence
     print(f"signac job {job.id[:7]}..: Running '4_LAMMPS_mnr_{job.sp.taskname}' to run the "
@@ -193,7 +195,7 @@ def run_postprocessing(
     """
     Run Python postprocessing script
     """
-    # Find postprocessing script
+    # Find Python script for postprocessing
     jpp = os.path.abspath(job.path)
     postprocess_fname = f"8_postprocessing.py"
     python_script_location = os.path.join(jpp, postprocess_fname)
@@ -206,7 +208,7 @@ def run_postprocessing(
     
     print(f"signac job {job.id[:7]}..: Running `8_postprocessing.py {job.sp.taskname}' "
           f"to postprocess results")
-
+    
     return command_to_run
 
 
