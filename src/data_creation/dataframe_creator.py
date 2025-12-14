@@ -39,7 +39,10 @@ def create_df(
 if __name__ == '__main__':
 	DATA_FOLDER = os.path.abspath("./data/")
 	
-	for taskname in ["autocorr", "full"]:
+	# targets = ["autocorr", "full"]
+	targets = ["full"]
+	
+	for taskname in targets:
 		seqpath = os.path.join(DATA_FOLDER, f"sequences_{taskname}_revsym.txt")
 		dfpath = os.path.join(DATA_FOLDER, f"{taskname}_dataframe.pkl")
 		create_df(seqpath, dfpath)
