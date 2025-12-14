@@ -1,6 +1,6 @@
 
 
-variable        runtime equal 10000000
+variable        runtime equal 100000000
 variable		subsample_rate equal 100000
 
 variable		outputfile_created string '3_created.data'

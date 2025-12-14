@@ -3,7 +3,7 @@
 #!/bin/bash
 #SBATCH --job-name="{{ id }}"
 #SBATCH --output=slurm_outs/slurm-job-%j.out
-#SBATCH --time=00:30:00
+#SBATCH --time=00:100:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 
