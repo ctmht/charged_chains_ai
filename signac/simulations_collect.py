@@ -15,6 +15,19 @@ except:
     pass
 
 
+task = None
+try:
+    if sys.argv[2]:
+        if sys.argv[2] == 'autocorr':
+            task = "autocorr"
+            print(f"Results will only be collected for task 'autocorr' ({task=})")
+        elif sys.argv[2] == 'full':
+            task = "full"
+            print(f"Results will only be collected for task 'full' ({task=})")
+except:
+    pass
+
+
 DATA_FOLDER = os.path.abspath("./data/")
 print(DATA_FOLDER)
 
@@ -32,6 +45,9 @@ for job in simman:
 	# Check if job is completed (has the postprocessed file)
     if job.isfile("9_processed.pkl"):
         taskname = job.sp.taskname
+        
+        if task is not None and task != taskname:
+            continue
         
 		# Load the job's results
         job_results_path = job.fn("9_processed.pkl")
