@@ -353,8 +353,8 @@ def process_full_analysis():
 	
 	# Gyration tensor eigenvalue derived quantities, computed by error propagation TODO: remove if errprop okay
 	prop_rad_gyr = get_expectation_variance(get_radius_of_gyration, mean, cov)
-	prop_asphericity = get_expectation_variance(asphericity, mean, cov)
-	prop_acylindricity = get_expectation_variance(acylindricity, mean, cov)
+	prop_asphericity = get_expectation_variance(get_asphericity, mean, cov)
+	prop_acylindricity = get_expectation_variance(get_acylindricity, mean, cov)
 	prop_relshapeaniso = get_expectation_variance(get_rel_shape_anisotropy, mean, cov)
 	
 	# Potential energy getter
