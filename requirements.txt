@@ -7,3 +7,6 @@ MDAnalysis
 torch
 scipy
 lammps-logfile
+
+jupyterlab
+notebook

@@ -1,7 +1,7 @@
 
 
-variable        runtime equal 1000000
-variable		subsample_rate equal 1000
+variable        runtime equal 10000000
+variable		subsample_rate equal 100000
 
 variable		outputfile_created string '3_created.data'
 variable		outputfile_relaxed string '5_relaxed.data'
@@ -82,14 +82,19 @@ pair_coeff		3 4 	${glob_ljeps} 	${glob_ljsig}	${att_ljcut} 	${glob_coulcut}
 pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 
 
+### Fix (linear and angular) momentum and NVT
 fix             noDriftRot 	all momentum 10 linear 1 1 1 angular
 fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
 
 compute 		molPotEng	all pe
 
-dump            lindump 	all custom ${subsample_rate} 	${outputfile_trajlin} id type xu yu zu vx vy vz c_molPotEng
+### Output
+dump            lindump 	all custom ${subsample_rate} 	${outputfile_trajlin} id type xu yu zu vx vy vz
+# dump			potEngLd	c_molPotEng
+
+thermo_style    custom step temp density press etotal pe ke epair spcpu
+thermo          ${subsample_rate}
 
 run             ${runtime}
 
 write_data      ${outputfile_assembled} nofix nocoeff
-

@@ -123,10 +123,8 @@ def create_polymer(
     
     # Set up shell command to run script
     sequence = job.sp.sequence
-    load_conda_env = "module load Anaconda3/2023.03-1"
-    activate_conda_env = "conda activate myenv"
     run_py_script = f"python {python_script_location} {sequence}"
-    command_to_run = load_conda_env + '\n' + activate_conda_env + '\n' + run_py_script
+    command_to_run = run_py_script
     
     print(f"signac job {job.id[:7]}..: Running '0_create_molecule.py' to generate a "
           f"chain with sequence '{sequence}'")
@@ -148,10 +146,9 @@ def create_lammps_simulation(
     lammps_script_location = os.path.join(jpp, "2_LAMMPS_creation.in")
     
     # Set up shell command to run script
-    load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
     run_creation = f"lmp -in {lammps_script_location}"
     lammps_flags = "-log 6_a_log.lammps"
-    command_to_run = load_lammps + '\n' + run_creation + ' ' + lammps_flags
+    command_to_run = run_creation + ' ' + lammps_flags
     
     sequence = job.sp.sequence
     print(f"signac job {job.id[:7]}..: Running '2_LAMMPS_creation' to create the LAMMPS "
@@ -174,10 +171,9 @@ def run_simulation(
     lammps_script_location = os.path.join(jpp, f"4_LAMMPS_mnr_{job.sp.taskname}.in")
     
     # Set up shell command to run script
-    load_lammps = "module load LAMMPS/23Jun2022-foss-2021b-kokkos"
     run_simulation = f"lmp -in {lammps_script_location}"
     lammps_flags = "-log 6_a_log.lammps"
-    command_to_run = load_lammps + '\n' + run_simulation + ' ' + lammps_flags
+    command_to_run = run_simulation + ' ' + lammps_flags
     
     sequence = job.sp.sequence
     print(f"signac job {job.id[:7]}..: Running '4_LAMMPS_mnr_{job.sp.taskname}' to run the "
@@ -201,10 +197,8 @@ def run_postprocessing(
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
-    load_conda_env = "module load Anaconda3/2023.03-1"
-    activate_conda_env = "conda activate myenv"
     run_py_script = f"python {python_script_location} {job.sp.taskname}"
-    command_to_run = load_conda_env + '\n' + activate_conda_env + '\n' + run_py_script
+    command_to_run = run_py_script
     
     print(f"signac job {job.id[:7]}..: Running `8_postprocessing.py {job.sp.taskname}' "
           f"to postprocess results")

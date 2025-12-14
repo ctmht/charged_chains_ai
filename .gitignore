@@ -4,6 +4,7 @@
 .vscode/
 nmm-week-6/
 jupyter_tests/
+jupyter/
 brpp_tutorial/
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm,jupyternotebooks

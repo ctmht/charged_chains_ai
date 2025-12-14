@@ -340,11 +340,11 @@ if __name__ == '__main__':
 	USE_SYM = True
 	TEMP = 10
 	
-	AUTOCORR_DATASET_SEED = 42
-	AUTOCORR_DATASET_SIZE = 10 ** 3
+	# AUTOCORR_DATASET_SEED = 42
+	# AUTOCORR_DATASET_SIZE = 10 ** 3
 	
 	FULL_DATASET_SEED = 67
-	FULL_DATASET_SIZE = 0 # 10 ** 4
+	FULL_DATASET_SIZE = 10 # 10 ** 4
 	
 	
 	# Create the distribution of sequences, with reversal symmetry and temperature-based flattening
@@ -355,17 +355,17 @@ if __name__ == '__main__':
 	filepath = os.path.join(DATA_FOLDER, filename)
 	np.save(filepath, distribution_revsym)
 	
-	# Sample distribution and create unique sequences
-	# 1. Autocorrelation analysis dataset
-	np.random.seed(AUTOCORR_DATASET_SEED)
-	samples_dist = sample_distribution(distribution_revsym, size = AUTOCORR_DATASET_SIZE)
-	autocorr_sequences = get_sequences(samples_dist, n_beads = 100)
+	# # Sample distribution and create unique sequences
+	# # 1. Autocorrelation analysis dataset
+	# np.random.seed(AUTOCORR_DATASET_SEED)
+	# samples_dist = sample_distribution(distribution_revsym, size = AUTOCORR_DATASET_SIZE)
+	# autocorr_sequences = get_sequences(samples_dist, n_beads = 100)
 	
-	filename = "sequences_autocorr_revsym.txt"
-	filepath = os.path.join(DATA_FOLDER, filename)
-	with open(filepath, "w") as autocorr_f:
-		for seq in autocorr_sequences:
-			autocorr_f.write(seq + "\n")
+	# filename = "sequences_autocorr_revsym.txt"
+	# filepath = os.path.join(DATA_FOLDER, filename)
+	# with open(filepath, "w") as autocorr_f:
+	# 	for seq in autocorr_sequences:
+	# 		autocorr_f.write(seq + "\n")
 	
 	# 2. Full dataset
 	np.random.seed(FULL_DATASET_SEED)
