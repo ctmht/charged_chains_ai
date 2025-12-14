@@ -19,7 +19,7 @@ import torch
 ### Functions implementing general (statistical) methods
 #####################################################################
 
-def mean_covariance(
+def get_mean_covariance(
 	elements: list[torch.Tensor]
 ) -> tuple[torch.Tensor]:
 	r"""
@@ -37,7 +37,7 @@ def mean_covariance(
 	return mean, covariance
 
 
-def expectation_variance(
+def get_expectation_variance(
 	func: Callable[[torch.Tensor], float],
 	mean: torch.Tensor,
 	cov: torch.Tensor
@@ -67,7 +67,7 @@ def expectation_variance(
 	)
 
 
-def sorted_eigenvalues(
+def get_sorted_eigenvalues(
 	symmetric_matrix: torch.Tensor
 ) -> torch.Tensor:
 	r"""
@@ -83,7 +83,7 @@ def sorted_eigenvalues(
 ### Task-specific frame processing functions
 #####################################################################
 
-def gyration_tensor(
+def get_gyration_tensor(
 	atom_positions: np.ndarray
 ) -> torch.Tensor:
 	r"""
@@ -103,7 +103,7 @@ def gyration_tensor(
 	return _positions_centered.mT @ _positions_centered / _n_atoms
 
 
-def end_to_end_distance(
+def get_end_to_end_distance(
 	atom_positions: np.ndarray
 ) -> torch.Tensor:
 	r"""
@@ -117,7 +117,7 @@ def end_to_end_distance(
 	return torch.Tensor(atom_positions[0] - atom_positions[-1])
 
 
-def end_to_end_autocorrelation(
+def get_end_to_end_autocorrelation(
 	end_to_end_vs: torch.Tensor,
 	lag_max: int
 ) -> torch.Tensor:
@@ -206,7 +206,7 @@ def fit_exponential_decay(
 ### Simulation statistics specific to gyration tensor eigenvalues
 #####################################################################
 
-def radius_of_gyration(
+def get_radius_of_gyration(
 	gyr_evals_vec3: torch.Tensor
 ) -> float:
 	r"""
@@ -220,7 +220,7 @@ def radius_of_gyration(
 	return torch.linalg.vector_norm(gyr_evals_vec3, ord = 2)
 
 
-def asphericity(
+def get_asphericity(
 	gyr_evals_vec3: torch.Tensor
 ) -> float:
 	r"""
@@ -235,7 +235,7 @@ def asphericity(
 	return gyr_evals_vec3[0] ** 2 - 0.5 * (gyr_evals_vec3[1] ** 2 + gyr_evals_vec3[2] ** 2)
 
 
-def acylindricity(
+def get_acylindricity(
 	gyr_evals_vec3: torch.Tensor
 ) -> float:
 	r"""
@@ -250,7 +250,7 @@ def acylindricity(
 	return gyr_evals_vec3[1] ** 2 - gyr_evals_vec3[2] ** 2
 
 
-def rel_shape_anisotropy(
+def get_rel_shape_anisotropy(
 	gyr_evals_vec3: torch.Tensor
 ) -> float:
 	r"""
@@ -314,20 +314,20 @@ def process_full_analysis():
 		positions = frame.positions
 		
 		# End-to-end distance vector and its autocorrelation
-		end_to_end = end_to_end_distance(positions)
+		end_to_end = get_end_to_end_distance(positions)
 		end_to_end_vs.append(end_to_end)
 		
 		# Gyration tensor and its eigenvalues
-		gyr_tensor = gyration_tensor(positions)
-		gyr_eigenv = sorted_eigenvalues(gyr_tensor)
+		gyr_tensor = get_gyration_tensor(positions)
+		gyr_eigenv = get_sorted_eigenvalues(gyr_tensor)
 		gyr_eigenvals.append(gyr_eigenv)
 		
 		# Gyration tensor eigenvalue derived quantities, computed per-frame
 		# TODO: If error propagation is appropriate then skip this
-		rad_gyr = radius_of_gyration(gyr_eigenv)
-		asphericity = asphericity(gyr_eigenv)
-		acylindricity = acylindricity(gyr_eigenv)
-		relshapeaniso = rel_shape_anisotropy(gyr_eigenv)
+		rad_gyr = get_radius_of_gyration(gyr_eigenv)
+		asphericity = get_asphericity(gyr_eigenv)
+		acylindricity = get_acylindricity(gyr_eigenv)
+		relshapeaniso = get_rel_shape_anisotropy(gyr_eigenv)
 		
 		radgyr_per_fr.append(rad_gyr)
 		aspher_per_fr.append(asphericity)
@@ -349,13 +349,13 @@ def process_full_analysis():
 	relsha_per_fr_var = torch.var(relsha_per_fr)
 	
 	# Mean and covariance matrix of (decreasingly) ordered eigenvalues
-	mean, cov = mean_covariance(gyr_eigenvals)
+	mean, cov = get_mean_covariance(gyr_eigenvals)
 	
 	# Gyration tensor eigenvalue derived quantities, computed by error propagation TODO: remove if errprop okay
-	prop_rad_gyr = expectation_variance(radius_of_gyration, mean, cov)
-	prop_asphericity = expectation_variance(asphericity, mean, cov)
-	prop_acylindricity = expectation_variance(acylindricity, mean, cov)
-	prop_relshapeaniso = expectation_variance(rel_shape_anisotropy, mean, cov)
+	prop_rad_gyr = get_expectation_variance(get_radius_of_gyration, mean, cov)
+	prop_asphericity = get_expectation_variance(asphericity, mean, cov)
+	prop_acylindricity = get_expectation_variance(acylindricity, mean, cov)
+	prop_relshapeaniso = get_expectation_variance(get_rel_shape_anisotropy, mean, cov)
 	
 	# Potential energy getter
 	NONMIN_RUN = 2
@@ -438,7 +438,7 @@ def process_autocorrelation():
 		
 		positions = frame.positions
 		
-		end_to_end = end_to_end_distance(positions)
+		end_to_end = get_end_to_end_distance(positions)
 		end_to_end_vs.append(end_to_end)
 	
 	# Parameters
@@ -448,7 +448,7 @@ def process_autocorrelation():
 	
 	# Autocorrelation analysis
 	lags = torch.arange(0, maxlag, 1)
-	ete_autocorrs = end_to_end_autocorrelation(end_to_end_vs, maxlag)
+	ete_autocorrs = get_end_to_end_autocorrelation(end_to_end_vs, maxlag)
 	decay_factor, nonmon_cutoff, quantile_cutoff = fit_exponential_decay(
 		X = lags, Y = ete_autocorrs,
 		alpha = 0.95, atol = 1e-5
