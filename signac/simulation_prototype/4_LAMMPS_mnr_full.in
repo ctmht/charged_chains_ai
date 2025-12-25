@@ -30,24 +30,25 @@ velocity        all create ${Temp} ${velSeed}
 thermo_style    custom step temp density press etotal pe ke epair spcpu
 thermo          1000
 
-###########################################################################
-# Soft relaxation (to remove overlaps of particles)
-######################################################################
-
-pair_style      soft 1.0
-pair_coeff      * * 0.0
-variable        prefactor equal ramp(0,300)
-fix             rampSoft all adapt 1 pair soft a * * v_prefactor
-
-minimize        0.0 1.0e-8 1000 100000
-
-fix             nvtSoft all nvt temp ${Temp} ${Temp} 0.5
-run             100000
-unfix           nvtSoft
-unfix           rampSoft
-reset_timestep  0
-
-write_data      ${outputfile_relaxed}
+### Actually no overlap is possible here
+# ###########################################################################
+# # Soft relaxation (to remove overlaps of particles)
+# ######################################################################
+# 
+# pair_style      soft 1.0
+# pair_coeff      * * 0.0
+# variable        prefactor equal ramp(0,300)
+# fix             rampSoft all adapt 1 pair soft a * * v_prefactor
+# 
+# minimize        0.0 1.0e-8 1000 100000
+# 
+# fix             nvtSoft all nvt temp ${Temp} ${Temp} 0.5
+# run             100000
+# unfix           nvtSoft
+# unfix           rampSoft
+# reset_timestep  0
+# 
+# write_data      ${outputfile_relaxed}
 
 ###########################################################################
 # Full LJ with Coulomb
@@ -85,6 +86,10 @@ pair_coeff		4 4 	${glob_ljeps} 	${glob_ljsig}	${rep_ljcut} 	${glob_coulcut}
 ### Fix (linear and angular) momentum and NVT
 fix             noDriftRot 	all momentum 10 linear 1 1 1 angular
 fix             nvt1 		all nvt temp ${Temp} ${Temp} 0.5
+
+### Get past the initial condition
+run				500000
+reset_timestep  0
 
 compute 		molPotEng	all pe
 

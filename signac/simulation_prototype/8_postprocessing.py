@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from collections.abc import Callable, Any
+from collections import Counter
 from typing import Literal
 import sys
 import os
@@ -8,12 +9,79 @@ import MDAnalysis as mda  	# manipulate and analyse molecular dynamics trajector
 import lammps_logfile
 import pandas as pd
 import numpy as np
+import scipy as sp
 import torch
 
 
 ###############################################################################
 #############################    GENERAL UTILS    #############################
 ###############################################################################
+
+#####################################################################
+### Functions implementing sequence descriptors (blockiness)
+#####################################################################
+
+def get_blockinesses(
+	sequence: str
+) -> dict[Literal['A', 'B', 'C', 'D'], float]:
+	"""
+	Computes a measure of the sequence blockiness based on the nontrivial (!= 1) eigenvalue
+	of a 2 x 2 Markov transition matrix, for sequences containing two bead types. If the
+	sequence contains more bead types (e.g. ABCD for this project), the function creates a
+	4 x 4 Markov transition matrix: for each type, the rows and columns are collapsed as if
+	representing a chain with two types (X and notX), and the eigenvalue is computed as usual
+	
+	Args:
+		sequence (`str`): The monomer sequence defining the linear polymer chain. By default,
+			the function supports strings containing [A, B, C, D] or nonempty subsets thereof,
+			other behaviours are not checked
+	Returns:
+		blockinesses (`dict[Literal['A', 'B', 'C', 'D'], float]`): Dictionary of bead types (keys)
+			and associated blockiness parameters (the nontrivial eigenvalue of the 2x2 matrix)
+	"""
+	# Count length-2 subsequences
+	monomers = sorted(list(Counter(sequence).keys()))
+	
+	counts = {ch1 + '1': {ch2 + '2': 0 for ch2 in monomers} for ch1 in monomers}
+    
+	for idx in range(len(sequence) - 1):
+		ch1 = sequence[idx]
+		ch2 = sequence[idx + 1]
+		counts[ch1 + '1'][ch2 + '2'] += 1
+    
+	# Create transition matrix and make (row-)stochastic
+	mat = pd.DataFrame(counts, dtype = float).apply(lambda row: row / row.sum()).T.values
+	if mat.sum() == len(sequence) - 1:
+		mat /= (len(sequence) - 1)
+	mat /= mat.sum(axis = 1)
+	
+	blockinesses: dict = {}
+	
+	if len(monomers) <= 2:
+		# The matrix is already trivial (2 x 2 for 2 monomer types)
+		# The nontrivial eigenvalue is = trace - 1
+		blockinesses[monomers[0]] = np.trace(mat) - 1
+		return blockinesses
+	
+	for coll_target in monomers:
+		# Collapse non-targets and keep target
+		idx = monomers.index(coll_target)
+		
+		YY = mat[idx, idx]
+		YN = mat[idx, :].sum() - mat[idx, idx]
+		NY = mat[:, idx].sum() - mat[idx, idx]
+		NN = mat.sum() - YY - YN - NY
+		NY /= 3
+		NN /= 3
+		
+		collapsed = np.array([
+			[YY, YN],
+			[NY, NN]
+		])
+		blockinesses[coll_target] = np.trace(collapsed) - 1
+	
+	return blockinesses
+
 
 #####################################################################
 ### Functions implementing general (statistical) methods
@@ -28,11 +96,14 @@ def get_mean_covariance(
 	Args:
 		elements (`list[torch.Tensor]`): the list of samples to be used in the mean and
 			covariance matrix computation. Iterable must contain `torch.Tensor` entries
+	Returns:
+		mean, covariance (`tuple[torch.Tensor]`): the mean and covariance matrix obtained
+			from the given list
 	"""
 	elements_arr = torch.stack(elements, dim = 0).mT
 	
 	mean = torch.mean(elements_arr, dim = 1)
-	covariance = torch.cov(elements_arr)
+	covariance = torch.cov(elements_arr, correction = 1)
 	
 	return mean, covariance
 
@@ -57,6 +128,9 @@ def get_expectation_variance(
 		func (`Callable`): the scalar-valued vector function `f` to be approximated
 		mean (`torch.Tensor`): the mean vector `E[X]`
 		cov (`torch.Tensor`): the covariance matrix `V[X]`
+	Returns:
+		(expectation, variance) (`tuple[float, float]`): the expectation and variance computed
+			using delta method for error propagation
 	"""
 	_jacobian_at_mean = torch.autograd.functional.jacobian(func, mean)
 	_hessian_at_mean = torch.autograd.functional.hessian(func, mean)
@@ -103,7 +177,7 @@ def get_gyration_tensor(
 	return _positions_centered.mT @ _positions_centered / _n_atoms
 
 
-def get_end_to_end_distance(
+def get_end_to_end_vector(
 	atom_positions: np.ndarray
 ) -> torch.Tensor:
 	r"""
@@ -113,6 +187,8 @@ def get_end_to_end_distance(
 		atom_positions (`np.ndarray`): position of atoms in the linear polymer chain. Must be a
 			`np.ndarray`, and it is assumed that each row represents an individual atom (directly
 			compatible with MDAnalysis frames)
+	Returns:
+		end-to-end vector (`torch.Tensor`)
 	"""
 	return torch.Tensor(atom_positions[0] - atom_positions[-1])
 
@@ -174,6 +250,10 @@ def fit_exponential_decay(
 			before starting to fluctuate uncontrollably at an undetermined cutoff point. A high
 			tolerance will result in the entire data being used in the regression, but a too low
 			tolerance might cut off the data too early to provide an accurate regression line.
+	Returns:
+		tau:
+		cutoff:
+		talpha:
 	
 	(*) To be precise, the function fits the regression ln(Y**2) = (-2 / k) X in order to find k,
 		a transformation we perform to ensure the logarithm is well-defined.
@@ -206,11 +286,11 @@ def fit_exponential_decay(
 ### Simulation statistics specific to gyration tensor eigenvalues
 #####################################################################
 
-def get_radius_of_gyration(
+def get_radius_of_gyration_sq(
 	gyr_evals_vec3: torch.Tensor
 ) -> float:
 	r"""
-	Compute the radius of gyration from gyration tensor eigenvalues:
+	Compute the (!squared) radius of gyration from gyration tensor eigenvalues:
 		``R_g = sqrt(eval_1 ** 2 + eval_2 ** 2 + eval_3 ** 2) = ||gyr_evals_vec3||_2``
 	
 	Args:
@@ -266,6 +346,60 @@ def get_rel_shape_anisotropy(
 	return 1.5 * (_norm4to4 / _norm2to4) - 0.5
 
 
+def get_neighbour_distribution(
+	sequence: str,
+	atom_positions: np.ndarray,
+	count_bonded: bool = False,
+	cutoff: float = 2,
+	mean: bool = True
+):
+	"""
+	Get the (mean) count of neighbours of each of the four types (A, B, C, D) around each of
+	the N (= 100) beads in the linear chain.
+	
+	Args:
+		atom_positions (`numpy.ndarray`): The array of 100 x 3 bead positions in a given frame
+			of the simulation for which this computation should be done
+		count_bonded (`bool`): By default, this count does not include the beads which are bonded
+			to be neighbours (False)
+		cutoff (`float`): The distance at which to cut off the count of neighbouring beads,
+			expected in LJ units. By default, each bead looks within a distance of 2 of itself
+		mean (`bool`): If False, the full 100 x 4 neighbour count is returned. When True, the
+			function will aggregate using the mean to return a 4-element vector of mean neighbour
+			counts per-type over the entire chain
+	"""
+	# Compute distance map of the linear chain
+	distance_map = sp.spatial.distance.squareform(
+		sp.spatial.distance.pdist(atom_positions)
+	)
+	
+	# For each bead, remove itself from the counts
+	diag_indices = np.arange(0, distance_map.shape[0], 1, dtype=int)
+	distance_map[diag_indices, diag_indices] = np.inf
+	
+	if not count_bonded:
+		# For each bead, remove the bounded neighbours (linear => first before and after itself)
+		offsubdiag_indices = np.arange(0, distance_map.shape[0] - 1, 1, dtype=int)
+		distance_map[offsubdiag_indices, offsubdiag_indices + 1] = np.inf
+		distance_map[offsubdiag_indices + 1, offsubdiag_indices] = np.inf
+	
+	# Clip distance map at cutoff distance
+	contact_map = distance_map <= cutoff
+	
+	# Encode bead types in the order they appear in the sequence
+	type_codes = np.array([ord(c) for c in sequence]) - ord('A')
+	one_hot = np.zeros((len(sequence), 4), dtype = int)
+	one_hot[np.arange(len(sequence)), type_codes] = 1
+	# Count neighbours per type using one-hot encoding over contact map
+	counts_unnorm = contact_map.astype(int) @ one_hot
+	
+	if mean:
+		# Average per-type neighbour counts over all beads
+		return np.mean(counts_unnorm, axis = 0)
+	
+	# Return all counts
+	return counts_unnorm
+
 
 
 def load(
@@ -283,126 +417,175 @@ def load(
 #########################  POST-PROCESSING FUNCTIONS  #########################
 ###############################################################################
 
-
-def process_full_analysis():
+def process_full_analysis(
+	job_folder: str | os.Path
+):
 	r"""
-	# TODO: test that error propagation is indeed fine enough before full simulation runs
-	# TODO: implement neighbourhood monomer proportions
+	
 	"""
 	dt_integration = 0.005
-	topology = '7_assembled.data'
-	
-	trajectory = '6_b_trajlin.data'
-	universe = load(topology, trajectory, dt_integration)
-	
-	polymer_file = '1_polymer.mol'
+
+	polymer_file = os.path.join(job_folder, '1_polymer.mol')
+	log_file = os.path.join(job_folder, '6_a_log.lammps')
+	trajectory = os.path.join(job_folder, '6_b_trajlin.data')
+	topology = os.path.join(job_folder, '7_assembled.data')
+	outfile = os.path.join(job_folder, '9_processed.pkl')
+
+	# Get molecule sequence
 	with open(polymer_file, 'r') as polf:
 		_ = next(polf)
-		seq = next(polf)[2:]
+		sequence = next(polf)[2:]
+	sequence = sequence[:-1] if sequence[-1] == '\n' else sequence
 	
-	outfile = '9_processed.pkl'
+	# Get monomer counts (A and C suffice here)
+	counts = Counter(sequence)
+	count_aliphatic_A = counts['A']
+	count_anion_C = counts['C']
 	
-	gyr_eigenvals = []
-	end_to_end_vs = []
+	# Get the four blockiness parameters
+	blockinesses = get_blockinesses(sequence)
+	for montype in 'ABCD':
+		if montype not in blockinesses:
+			blockinesses[montype] = 0
 	
-	radgyr_per_fr = []
-	aspher_per_fr = []
-	acylin_per_fr = []
-	relsha_per_fr = []
+	# Potential energy getter
+	# -> There are two runs in the LAMMPS simulation, first (1) for minimization and second
+	# -> (2) full, NOT zero-indexed in the lammps_logfile library
+	logged_data = lammps_logfile.File(log_file)
+	poteng = logged_data.get("PotEng", run_num = 2)
+	poteng_perfm = np.mean(poteng)
+	poteng_perfs = np.std(poteng, ddof = 1)
+	
+	# Load universe
+	universe = load(topology, trajectory, dt_integration)
+	
+	
+	gyr_tensor_oevals = []
+	radgyr2_perf = []
+	aspher_perf = []
+	acylin_perf = []
+	relsha_perf = []
 	
 	for frame in universe.trajectory:
 		positions = frame.positions
 		
-		# End-to-end distance vector and its autocorrelation
-		end_to_end = get_end_to_end_distance(positions)
-		end_to_end_vs.append(end_to_end)
-		
-		# Gyration tensor and its eigenvalues
+		# Gyration tensor and its (ordered/sorted) eigenvalues
 		gyr_tensor = get_gyration_tensor(positions)
-		gyr_eigenv = get_sorted_eigenvalues(gyr_tensor)
-		gyr_eigenvals.append(gyr_eigenv)
+		oevals = get_sorted_eigenvalues(gyr_tensor)
+		gyr_tensor_oevals.append(oevals)
 		
 		# Gyration tensor eigenvalue derived quantities, computed per-frame
-		# TODO: If error propagation is appropriate then skip this
-		rad_gyr = get_radius_of_gyration(gyr_eigenv)
-		asphericity = get_asphericity(gyr_eigenv)
-		acylindricity = get_acylindricity(gyr_eigenv)
-		relshapeaniso = get_rel_shape_anisotropy(gyr_eigenv)
+		# TODO: remove after errprop check
+		radgyr2 = get_radius_of_gyration_sq(oevals)
+		radgyr2_perf.append(radgyr2)
 		
-		radgyr_per_fr.append(rad_gyr)
-		aspher_per_fr.append(asphericity)
-		acylin_per_fr.append(acylindricity)
-		relsha_per_fr.append(relshapeaniso)
+		aspher = get_asphericity(oevals)
+		aspher_perf.append(aspher)
+		
+		acylin = get_acylindricity(oevals)
+		acylin_perf.append(acylin)
+		
+		relsha = get_rel_shape_anisotropy(oevals)
+		relsha_perf.append(relsha)
 	
-	# Iterative mean and variance TODO: remove after check
-	radgyr_per_fr = torch.as_tensor(radgyr_per_fr)
-	radgyr_per_fr_mean = torch.mean(radgyr_per_fr)
-	radgyr_per_fr_var = torch.var(radgyr_per_fr)
-	aspher_per_fr = torch.as_tensor(aspher_per_fr)
-	aspher_per_fr_mean = torch.mean(aspher_per_fr)
-	aspher_per_fr_var = torch.var(aspher_per_fr)
-	acylin_per_fr = torch.as_tensor(acylin_per_fr)
-	acylin_per_fr_mean = torch.mean(acylin_per_fr)
-	acylin_per_fr_var = torch.var(acylin_per_fr)
-	relsha_per_fr = torch.as_tensor(relsha_per_fr)
-	relsha_per_fr_mean = torch.mean(relsha_per_fr)
-	relsha_per_fr_var = torch.var(relsha_per_fr)
+	# Per-frame means and variances
+	# TODO: remove after errprop check
+	radgyr2_perf = torch.as_tensor(radgyr2_perf).detach().numpy()
+	radgyr2_perfm = np.mean(radgyr2_perf)
+	radgyr2_perfs = np.std(radgyr2_perf, ddof = 1)
+	
+	aspher_perf = torch.as_tensor(aspher_perf).detach().numpy()
+	aspher_perfm = np.mean(aspher_perf)
+	aspher_perfs = np.std(aspher_perf, ddof = 1)
+	
+	acylin_perf = torch.as_tensor(acylin_perf).detach().numpy()
+	acylin_perfm = np.mean(acylin_perf)
+	acylin_perfs = np.std(acylin_perf, ddof = 1)
+	
+	relsha_perf = torch.as_tensor(relsha_perf).detach().numpy()
+	relsha_perfm = np.mean(relsha_perf)
+	relsha_perfs = np.std(relsha_perf, ddof = 1)
 	
 	# Mean and covariance matrix of (decreasingly) ordered eigenvalues
-	mean, cov = get_mean_covariance(gyr_eigenvals)
+	gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv = get_mean_covariance(gyr_tensor_oevals)
 	
-	# Gyration tensor eigenvalue derived quantities, computed by error propagation TODO: remove if errprop okay
-	prop_rad_gyr = get_expectation_variance(get_radius_of_gyration, mean, cov)
-	prop_asphericity = get_expectation_variance(get_asphericity, mean, cov)
-	prop_acylindricity = get_expectation_variance(get_acylindricity, mean, cov)
-	prop_relshapeaniso = get_expectation_variance(get_rel_shape_anisotropy, mean, cov)
+	# Gyration tensor eigenvalue derived quantities, computed by error propagation
+	radgyr2_propm, radgyr2_propv = get_expectation_variance(get_radius_of_gyration_sq,
+		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv)
+	radgyr2_props = torch.sqrt(radgyr2_propv).detach().numpy()
 	
-	# Potential energy getter
-	NONMIN_RUN = 2
-	logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), '6_a_log.lammps')
-	logged_data = lammps_logfile.File(logfile)
+	aspher_propm, aspher_propv = get_expectation_variance(get_asphericity,
+		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv)
+	aspher_props = torch.sqrt(aspher_propv).detach().numpy()
 	
-	# There are two runs in the LAMMPS simulation, first (1) for minimization and second (2) full
-	# NOT zero-indexed in the lammps_logfile library
-	pot_eng = logged_data.get("PotEng", run_num = 2)
+	acylin_propm, acylin_propv = get_expectation_variance(get_acylindricity,
+		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv)
+	acylin_props = torch.sqrt(acylin_propv).detach().numpy()
 	
-	meanpe = np.mean(pot_eng)
-	varpe = np.var(pot_eng)
+	relsha_propm, relsha_propv = get_expectation_variance(get_rel_shape_anisotropy,
+		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfm)
+	relsha_props = torch.sqrt(relsha_propv).detach().numpy()
 	
-	# Saving results
-	results = dict(
-		# TODO: optimize these
-		sequence = [seq],
-		
-		maxtime = [universe.trajectory[-1].time],
-		
-		gyr_tensor_eigenvalues = [torch.stack(gyr_eigenvals, dim = 0)],
-		
-		mean_eigenvalues = [mean],
-		covariance_eigenvalues = [cov],
-		
-		# TODO: remove after check
-		R_g_perfm = [radgyr_per_fr_mean],
-		R_g_perfv = [radgyr_per_fr_var],
-		R_g_propm = [prop_rad_gyr[0]],
-		R_g_propv = [prop_rad_gyr[1]],
-		b_perfm = [aspher_per_fr_mean],
-		b_perfv = [aspher_per_fr_var],
-		b_propm = [prop_asphericity[0]],
-		b_propv = [prop_asphericity[1]],
-		c_perfm = [acylin_per_fr_mean],
-		c_perfv = [acylin_per_fr_var],
-		c_propm = [prop_acylindricity[0]],
-		c_propv = [prop_acylindricity[1]],
-		kappa2_perfm = [relsha_per_fr_mean],
-		kappa2_perfv = [relsha_per_fr_var],
-		kappa2_propm = [prop_relshapeaniso[0]],
-		kappa2_propv = [prop_relshapeaniso[1]],
-		
-		PE_mean = [meanpe],
-		PE_var = [varpe]
+	# Get neighbour counts at last dump frame
+	positions = universe.trajectory[-1].positions
+	nb_mean = get_neighbour_distribution(
+		sequence,
+		positions,
+		count_bonded = False,
+		cutoff = 2,
+		mean = True
 	)
-	df = pd.DataFrame(results)
+	nb_mean_dict = dict(zip('ABCD', nb_mean))
+	
+	# Define results
+	results: dict[str, Any] = {
+		"job_id": os.path.basename(job_folder),
+		# Sequence and descriptors
+		"sequence": sequence,
+		"count_aliphatic_A": count_aliphatic_A,
+		"count_anion_C": count_anion_C,
+		"blockiness_A": blockinesses['A'],
+		"blockiness_B": blockinesses['B'],
+		"blockiness_C": blockinesses['C'],
+		"blockiness_D": blockinesses['D'],
+		# Shape and descriptors
+		## Gyration tensor - ordered eigenvalues (with vector mean and covariance matrix)
+		"gyr_tensor_oevals": gyr_tensor_oevals,
+		"gyr_tensor_oevals_perfm": gyr_tensor_oevals_perfm,
+		"gyr_tensor_oevals_perfv": gyr_tensor_oevals_perfv,
+		## Squared radius of gyration R_g^2
+		"radgyr2_perfm": radgyr2_perfm,
+		"radgyr2_perfs": radgyr2_perfs,
+		"radgyr2_propm": radgyr2_propm,
+		"radgyr2_props": radgyr2_props,
+		## Asphericity b
+		"aspher_perfm": aspher_perfm,
+		"aspher_perfs": aspher_perfs,
+		"aspher_propm": aspher_propm,
+		"aspher_props": aspher_props,
+		## Acylindricity c
+		"acylin_perfm": acylin_perfm,
+		"acylin_perfs": acylin_perfs,
+		"acylin_propm": acylin_propm,
+		"acylin_props": acylin_props,
+		## Relative shape anisotropy \kappa^2
+		"relsha_perfm": relsha_perfm,
+		"relsha_perfs": relsha_perfs,
+		"relsha_propm": relsha_propm,
+		"relsha_props": relsha_props,
+		## Potential energy V
+		"poteng_perfm": poteng_perfm,
+		"poteng_perfs": poteng_perfs,
+		## Neighbourhoods
+		"nbc_perbm_A": nb_mean_dict['A'],
+		"nbc_perbm_B": nb_mean_dict['B'],
+		"nbc_perbm_C": nb_mean_dict['C'],
+		"nbc_perbm_D": nb_mean_dict['D']
+		
+	}
+	
+	# Save results
+	df = pd.DataFrame(pd.Series(results)).T
 	df.to_pickle(outfile)
 
 
@@ -438,7 +621,7 @@ def process_autocorrelation():
 		
 		positions = frame.positions
 		
-		end_to_end = get_end_to_end_distance(positions)
+		end_to_end = get_end_to_end_vector(positions)
 		end_to_end_vs.append(end_to_end)
 	
 	# Parameters
