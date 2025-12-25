@@ -9,6 +9,8 @@ scipy
 lammps-logfile
 tables
 h5py
+signac
+signac-flow
 
 jupyterlab
 notebook
