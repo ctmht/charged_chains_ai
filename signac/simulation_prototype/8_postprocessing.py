@@ -665,11 +665,13 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		taskname: Literal["autocorr", "full"] = sys.argv[1]
 		print("Run script with task", taskname)
+		
+		job_folder = sys.argv[2]
 	
 	match taskname:
 		case "autocorr":
 			process_autocorrelation()
 		case "full":
-			process_full_analysis()
+			process_full_analysis(job_folder)
 		case "_TEST" | _:
 			...
