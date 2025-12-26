@@ -418,7 +418,7 @@ def load(
 ###############################################################################
 
 def process_full_analysis(
-	job_folder: str | os.Path
+	job_folder: str
 ):
 	r"""
 	
