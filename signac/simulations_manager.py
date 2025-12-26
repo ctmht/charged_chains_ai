@@ -22,9 +22,6 @@ class SimulationsManager(FlowProject):
             environment = None,
             entrypoint = None
         )
-        
-        # Reorganize workspace for easier task separation
-        self.config['workspace_dir'] = "workspace/{sp.taskname}/{id}"
     
     
     def create_jobs_simulations(
