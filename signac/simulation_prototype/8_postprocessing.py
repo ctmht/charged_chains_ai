@@ -135,8 +135,6 @@ def get_expectation_variance(
 	_jacobian_at_mean = torch.autograd.functional.jacobian(func, mean)
 	_hessian_at_mean = torch.autograd.functional.hessian(func, mean)
 	
-	print(_jacobian_at_mean, _hessian_at_mean, cov, _hessian_at_mean @ cov, sep = '\n')
-	
 	return (
 		func(mean) + 0.5 * torch.trace(_hessian_at_mean @ cov),
 		_jacobian_at_mean.transpose(0, -1) @ cov @ _jacobian_at_mean
@@ -525,7 +523,7 @@ def process_full_analysis(
 	acylin_props = torch.sqrt(acylin_propv).detach().numpy()
 	
 	relsha_propm, relsha_propv = get_expectation_variance(get_rel_shape_anisotropy,
-		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfm)
+		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv)
 	relsha_props = torch.sqrt(relsha_propv).detach().numpy()
 	
 	# Get neighbour counts at last dump frame
