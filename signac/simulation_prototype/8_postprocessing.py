@@ -135,6 +135,8 @@ def get_expectation_variance(
 	_jacobian_at_mean = torch.autograd.functional.jacobian(func, mean)
 	_hessian_at_mean = torch.autograd.functional.hessian(func, mean)
 	
+	print(_jacobian_at_mean, _hessian_at_mean, cov, _hessian_at_mean @ cov, sep = '\n')
+	
 	return (
 		func(mean) + 0.5 * torch.trace(_hessian_at_mean @ cov),
 		_jacobian_at_mean.transpose(0, -1) @ cov @ _jacobian_at_mean
