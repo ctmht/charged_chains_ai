@@ -1,6 +1,6 @@
-from collections.abc import Callable, Any
+from collections.abc import Callable
 from collections import Counter
-from typing import Literal
+from typing import Literal, Any
 import sys
 import os
 
@@ -550,7 +550,7 @@ def process_full_analysis(
 		"blockiness_D": blockinesses['D'],
 		# Shape and descriptors
 		## Gyration tensor - ordered eigenvalues (with vector mean and covariance matrix)
-		"gyr_tensor_oevals": gyr_tensor_oevals,
+		# "gyr_tensor_oevals": gyr_tensor_oevals, # TODO: remove since might be superfluous
 		"gyr_tensor_oevals_perfm": gyr_tensor_oevals_perfm,
 		"gyr_tensor_oevals_perfv": gyr_tensor_oevals_perfv,
 		## Squared radius of gyration R_g^2
