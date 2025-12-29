@@ -551,8 +551,8 @@ def process_full_analysis(
 		# Shape and descriptors
 		## Gyration tensor - ordered eigenvalues (with vector mean and covariance matrix)
 		# "gyr_tensor_oevals": gyr_tensor_oevals, # TODO: remove since might be superfluous
-		"gyr_tensor_oevals_perfm": gyr_tensor_oevals_perfm,
-		"gyr_tensor_oevals_perfv": gyr_tensor_oevals_perfv,
+		"gyr_tensor_oevals_perfm": gyr_tensor_oevals_perfm.detach().numpy(),
+		"gyr_tensor_oevals_perfv": gyr_tensor_oevals_perfv.detach().numpy(),
 		## Squared radius of gyration R_g^2
 		"radgyr2_perfm": radgyr2_perfm,
 		"radgyr2_perfs": radgyr2_perfs,
