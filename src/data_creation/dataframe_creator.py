@@ -35,7 +35,7 @@ def create_df(
 		if shuffle:
 			df = df.sample(frac=1).reset_index(drop=True)
 		
-		df.to_csv(outfile + '.csv')
+		df.to_csv(outfile)
 		df.to_pickle(outfile)
 
 
