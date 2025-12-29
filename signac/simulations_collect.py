@@ -3,6 +3,7 @@ import sys
 import os
 
 import pandas as pd
+import numpy as np
 import h5py
 
 from simulations_manager import SimulationsManager
@@ -159,7 +160,7 @@ def append_job_to_h5(h5f, job_id, job_data):
         col_name = path.split('/')[-1]
         
         if col_name == 'job_id':
-            dataset[current_size] = np.bytes_(job_id)
+            dataset[current_size] = np.bytes_(job_id).astype('S100')
         elif col_name in job_data:
             value = job_data[col_name]
             if isinstance(value, np.ndarray):
