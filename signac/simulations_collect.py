@@ -195,7 +195,8 @@ if __name__ == '__main__':
     args = parse_arguments()
     REPLACE = args.replace
     TASK = args.taskname
-
+    
+    print(f"Running collector with {REPLACE=} and {TASK=}")
 
     DATA_FOLDER = os.path.abspath("./data/")
     print(DATA_FOLDER)
@@ -207,10 +208,12 @@ if __name__ == '__main__':
     simman = SimulationsManager(path = SIGNAC_FOLDER)
     simman.init_project(path = SIGNAC_FOLDER)
     
-    if TASK == 'autocorr':
+    if TASK not in ['autocorr', 'full']:
+        print(f"Taskname {TASK=} not supported, no action will be taken."
+               "Use option -h for example usage")
+    elif TASK == 'autocorr':
         old_collect_autocorr()
-    
-    if TASK == 'full':
+    elif TASK == 'full':
         output_h5_path = os.path.join(DATA_FOLDER, f"{TASK}_results.h5")
         
         # Main processing
