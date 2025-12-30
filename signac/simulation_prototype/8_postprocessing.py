@@ -449,10 +449,10 @@ def process_full_analysis(
 			blockinesses[montype] = 0
 	
 	# Potential energy getter
-	# -> There are two runs in the LAMMPS simulation, first (1) for minimization and second
-	# -> (2) full, NOT zero-indexed in the lammps_logfile library
+	# -> There are two runs in the LAMMPS simulation, first (0) for minimization (first 'run')
+	# and second (1) full run (second 'run' in the 4_LAMMPS_mnr_full.in file)
 	logged_data = lammps_logfile.File(log_file)
-	poteng = logged_data.get("PotEng", run_num = 2)
+	poteng = logged_data.get("PotEng", run_num = 1)
 	poteng_perfm = np.mean(poteng)
 	poteng_perfs = np.std(poteng, ddof = 1)
 	
