@@ -230,9 +230,9 @@ if __name__ == '__main__':
                     continue
                 
                 # Check if job already exists in HDF5
-                if not REPLACE and job.id in existing_ids:
-                    print(f"Job {job.id[:8]}... already exists, skipping")
+                if not REPLACE and np.bytes_(job.id).astype('S100') in existing_ids:
                     skipped_count += 1
+                    print(f"Job {job.id[:8]}... already exists, skipping {skipped_count}")
                     continue
                 
                 # Load job results
