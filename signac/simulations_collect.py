@@ -122,18 +122,10 @@ def ensure_h5_structure(h5f):
 
 
 
-def job_exists_in_h5(h5f, job_id):
+def job_exists_in_h5(h5f, job_id, existing_ids: set):
     """
     Check if a job ID already exists in the HDF5 file
     """
-    if 'indexers/job_id' not in h5f or h5f['indexers/job_id'].shape[0] == 0:
-        return False
-    
-    existing_ids = h5f['indexers/job_id'][:]
-    # Convert bytes to string for comparison
-    if isinstance(existing_ids[0], bytes):
-        existing_ids = [id.decode('utf-8') for id in existing_ids]
-    
     return job_id in existing_ids
 
 
@@ -222,6 +214,8 @@ if __name__ == '__main__':
             # Ensure the structure exists
             ensure_h5_structure(h5f)
             
+            existing_ids = set(h5f['indexers/job_id'][:])
+            
             # Track processed jobs
             processed_count = 0
             skipped_count = 0
@@ -236,7 +230,7 @@ if __name__ == '__main__':
                     continue
                 
                 # Check if job already exists in HDF5
-                if not REPLACE and job_exists_in_h5(h5f, job.id):
+                if not REPLACE and job.id in existing_ids:
                     print(f"Job {job.id[:8]}... already exists, skipping")
                     skipped_count += 1
                     continue
@@ -251,6 +245,8 @@ if __name__ == '__main__':
                 # Append to HDF5
                 append_job_to_h5(h5f, job.id, job_data)
                 processed_count += 1
+                
+                existing_ids.add(np.bytes_(job.id).astype('S100'))
                 
                 # Print progress every 100 jobs
                 if processed_count % 100 == 0:
