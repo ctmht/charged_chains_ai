@@ -91,7 +91,7 @@ data_structure = {
 
 # Add blockiness and nbc_perbm datasets
 for bead in ['A', 'B', 'C', 'D']:
-    data_structure[f'sequence_descriptors/blockinesses/blockiness_{bead}': ('float64', ())]
+    data_structure[f'sequence_descriptors/blockinesses/blockiness_{bead}'] = ('float64', ())
     data_structure[f'shape_descriptors/nbc_perbm/nbc_perbm_{bead}'] = ('float64', ())
 
 # Add statistics datasets
