@@ -83,16 +83,15 @@ data_structure = {
     'indexers/sequence': ('S100', ()),
     'sequence_descriptors/counts/count_aliphatic_A': ('int64', ()),
     'sequence_descriptors/counts/count_anion_C': ('int64', ()),
-    'sequence_descriptors/blockinesses/blockiness_A': ('float64', ()),
-    'sequence_descriptors/blockinesses/blockiness_B': ('float64', ()),
-    'sequence_descriptors/blockinesses/blockiness_C': ('float64', ()),
-    'sequence_descriptors/blockinesses/blockiness_D': ('float64', ()),
     'shape_descriptors/gyr_tensor_oevals/gyr_tensor_oevals_perfm': ('float64', (3,)),
     'shape_descriptors/gyr_tensor_oevals/gyr_tensor_oevals_perfv': ('float64', (3, 3)),
+    'shape_descriptors/poteng/poteng_perfm': ('float64', ()),
+	'shape_descriptors/poteng/poteng_perfs': ('float64', ()),
 }
 
-# Add nbc_perbm datasets
+# Add blockiness and nbc_perbm datasets
 for bead in ['A', 'B', 'C', 'D']:
+    data_structure[f'sequence_descriptors/blockinesses/blockiness_{bead}': ('float64', ())]
     data_structure[f'shape_descriptors/nbc_perbm/nbc_perbm_{bead}'] = ('float64', ())
 
 # Add statistics datasets
