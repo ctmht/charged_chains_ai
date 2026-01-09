@@ -5,6 +5,7 @@ pandas
 freud
 MDAnalysis
 torch
+spdlayers
 scipy
 lammps-logfile
 tables

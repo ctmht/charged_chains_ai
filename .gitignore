@@ -9,6 +9,7 @@ brpp_tutorial/
 signac/workspace
 signac/old_workspaces
 data
+*__pycache__*
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=pycharm,jupyternotebooks
