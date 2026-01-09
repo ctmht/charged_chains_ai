@@ -9,21 +9,24 @@ import signac
 
 class SimulationsManager(FlowProject):
     """ Signac flow for management of LAMMPS simulations """
-    
+
     def __init__(
         self,
-        path: str | None = None
+        path: str | None = None,
+        job_limit: int = 20_000
     ):
         """
         Initialize an object for general LAMMPS simulation management
         """
+        self.job_limit = job_limit
+        
         super().__init__(
             path,
             environment = None,
             entrypoint = None
         )
-    
-    
+
+
     def create_jobs_simulations(
         self,
         taskname: Literal["autocorr", "full"],
@@ -32,40 +35,56 @@ class SimulationsManager(FlowProject):
         """
         Creates statepoints and then jobs based on the information found in the dataframes
         """
+        if len(self) >= self.job_limit:
+            return
+
         df: pd.DataFrame = pd.read_pickle(dataframe_path)
         
         for idx, row in df.iterrows():
-            statepoint = row.to_dict()
+            if row["used"] == 1:
+                continue
             
-            statepoint["idx"] = idx
-            statepoint["taskname"] = taskname
-            
-            # TODO: statepoint["expected_outputs"]?
+            statepoint = {
+                "sequence": row["sequence"],
+                "taskname": taskname
+            }
             
             job = self.open_job(statepoint)
             
-            if job not in self:
-                # Initialize job
-                job.init()
-                
-                # Copy task-specific template folder into the job's workspace
-                jpp = os.path.abspath(job.project.path)
-                template_fld = os.path.join(jpp, f"simulation_prototype")
-                job_dest_fld = job.path
-                
-                for f in os.listdir(template_fld):
-                    if os.path.isfile(os.path.join(template_fld, f)):
-                        # Only copy the task-specific LAMMPS script:
-                        # 4_LAMMPS_mnr_autocorr.in or 4_LAMMPS_mnr_full.in
-                        if f[0] == '4' and taskname not in f:
-                            continue
-                        
-                        template_filepath = os.path.join(template_fld, f)
-                        target_filepath = os.path.join(job_dest_fld, f)
-                        
-                        shutil.copyfile(template_filepath, target_filepath)
+            if job in self:
+                continue
+            
+            # Initialize job
+            job.init()
+
+            # Copy task-specific template folder into the job's workspace
+            jpp = os.path.abspath(job.project.path)
+            template_fld = os.path.join(jpp, f"simulation_prototype")
+            job_dest_fld = job.path
+
+            for f in os.listdir(template_fld):
+                if os.path.isfile(os.path.join(template_fld, f)):
+                    # Only copy the task-specific LAMMPS script:
+                    # 4_LAMMPS_mnr_autocorr.in or 4_LAMMPS_mnr_full.in
+                    if f[0] == '4' and taskname not in f:
+                        continue
+
+                    template_filepath = os.path.join(template_fld, f)
+                    target_filepath = os.path.join(job_dest_fld, f)
+
+                    shutil.copyfile(template_filepath, target_filepath)
+            
+            df.loc[idx]["used"] = 1
+            
+            if len(self) % 50 == 0:
+                print(f"Created job {job.id} for sequence {job.sp.sequence}, count {len(self)}")
+
+            if len(self) == self.job_limit:
+                break
+        
+        df.to_pickle(dataframe_path)
     
-    
+
     def create_jobs_mltraining(
         self,
         dataframe_path: str
@@ -74,10 +93,10 @@ class SimulationsManager(FlowProject):
         Creates statepoints and then jobs based on the information found in the dataframes
         """
         df: pd.DataFrame = pd.read_pickle(dataframe_path)
-        
+
         for idx, row in df.iterrows():
             statepoint = row.to_dict()
-            
+
             statepoint["idx"] = idx
             statepoint["taskname"] = "ml_training"
 

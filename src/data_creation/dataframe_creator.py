@@ -31,11 +31,12 @@ def create_df(
 		
 		df["N_A"] = df["sequence"].apply(get_num("A")) # get number of aliphatic monomers
 		df["N_C"] = df["sequence"].apply(get_num("C")) # get number of anion monomers
+		df["used"] = 0
 		
 		if shuffle:
-			df = df.sample(frac=1).reset_index(drop=True)
+			df = df.sample(frac = 1).reset_index(drop = True)
 		
-		df.to_csv(outfile)
+		df.to_csv(outfile + '.csv')
 		df.to_pickle(outfile)
 
 
