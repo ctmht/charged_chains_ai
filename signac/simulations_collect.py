@@ -195,7 +195,7 @@ if __name__ == '__main__':
 
     SIGNAC_FOLDER = os.path.join(os.getcwd(), "signac")
     print(SIGNAC_FOLDER)
-
+    
 
     simman = SimulationsManager(path = SIGNAC_FOLDER)
     simman.init_project(path = SIGNAC_FOLDER)
@@ -219,7 +219,11 @@ if __name__ == '__main__':
             processed_count = 0
             skipped_count = 0
             
-            for job in simman.find_jobs({'taskname': 'full'}):
+            for job in simman:
+                # Only look at 'full' jobs
+                if not job.sp.taskname == 'full':
+                    continue
+                
                 # Check if job is completed and matches task filter
                 if not job.isfile("9_processed.pkl"):
                     continue
