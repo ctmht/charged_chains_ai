@@ -297,7 +297,7 @@ def get_radius_of_gyration_sq(
 		gyr_evals_vec3 (`torch.Tensor`): the three eigenvalues of the gyration tensor in a single
 			vector. Eigenvalue ordering in this vector is irrelevant
 	"""
-	return torch.linalg.vector_norm(gyr_evals_vec3, ord = 2)
+	return gyr_evals_vec3.sum())
 
 
 def get_asphericity(
@@ -312,7 +312,7 @@ def get_asphericity(
 			vector. Eigenvalues in this vector *must* be sorted in decreasing order, since this is
 			not enforced internally (`gyr_evals_vec3[0] > gyr_evals_vec3[1] > gyr_evals_vec3[2]`)
 	"""
-	return gyr_evals_vec3[0] ** 2 - 0.5 * (gyr_evals_vec3[1] ** 2 + gyr_evals_vec3[2] ** 2)
+	return gyr_evals_vec3[0] - 0.5 * (gyr_evals_vec3[1] + gyr_evals_vec3[2])
 
 
 def get_acylindricity(
@@ -327,7 +327,7 @@ def get_acylindricity(
 			vector. Eigenvalues in this vector *must* be sorted in decreasing order, since this is
 			not enforced internally (`gyr_evals_vec3[0] > gyr_evals_vec3[1] > gyr_evals_vec3[2]`)
 	"""
-	return gyr_evals_vec3[1] ** 2 - gyr_evals_vec3[2] ** 2
+	return gyr_evals_vec3[1] - gyr_evals_vec3[2]
 
 
 def get_rel_shape_anisotropy(
@@ -341,9 +341,9 @@ def get_rel_shape_anisotropy(
 		gyr_evals_vec3 (`torch.Tensor`): the three eigenvalues of the gyration tensor in a single
 			vector. Eigenvalue ordering in this vector is irrelevant
 	"""
-	_norm2to4 = torch.linalg.vector_norm(gyr_evals_vec3, ord = 2) ** 4
-	_norm4to4 = torch.linalg.vector_norm(gyr_evals_vec3, ord = 4) ** 4
-	return 1.5 * (_norm4to4 / _norm2to4) - 0.5
+	_norm2to2 = torch.linalg.vector_norm(gyr_evals_vec3, ord = 2) ** 2
+	_radgyr_to_4 = gyr_evals_vec3.sum() ** 2
+	return 1.5 * (_norm2to2 / _radgyr_to_4) - 0.5
 
 
 def get_neighbour_distribution(
@@ -466,8 +466,22 @@ def process_full_analysis(
 	acylin_perf = []
 	relsha_perf = []
 	
+	fw_positions = []
+	fw_neighbcts = []
+	
 	for frame in universe.trajectory:
 		positions = frame.positions
+		
+		fw_positions.append(positions)
+		
+		nbcount = get_neighbour_distribution(
+			sequence,
+			positions,
+			count_bonded = False,
+			cutoff = 2,
+			mean = False
+		)
+		fw_neighbcts.append(nbcount)
 		
 		# Gyration tensor and its (ordered/sorted) eigenvalues
 		gyr_tensor = get_gyration_tensor(positions)
@@ -526,16 +540,15 @@ def process_full_analysis(
 		gyr_tensor_oevals_perfm, gyr_tensor_oevals_perfv)
 	relsha_props = torch.sqrt(relsha_propv).detach().numpy()
 	
-	# Get neighbour counts at last dump frame
-	positions = universe.trajectory[-1].positions
-	nb_mean = get_neighbour_distribution(
-		sequence,
-		positions,
-		count_bonded = False,
-		cutoff = 2,
-		mean = True
-	)
-	nb_mean_dict = dict(zip('ABCD', nb_mean))
+	positions_lastf = fw_positions[-1]
+	fw_positions = np.stack(fw_positions)
+	positions_perfm = fw_positions.mean(axis = 0)
+	positions_perfs = fw_positions.std(axis = 0, ddof = 1)
+	
+	nbc_lastf = fw_neighbcts[-1]
+	fw_neighbcts = np.stack(fw_neighbcts)
+	nbc_perfm = fw_neighbcts.mean(axis = 0)
+	nbc_perfs = fw_neighbcts.std(axis = 0, ddof = 1)
 	
 	# Define results
 	results: dict[str, Any] = {
@@ -550,7 +563,6 @@ def process_full_analysis(
 		"blockiness_D": blockinesses['D'],
 		# Shape and descriptors
 		## Gyration tensor - ordered eigenvalues (with vector mean and covariance matrix)
-		# "gyr_tensor_oevals": gyr_tensor_oevals, # TODO: remove since might be superfluous
 		"gyr_tensor_oevals_perfm": gyr_tensor_oevals_perfm.detach().numpy(),
 		"gyr_tensor_oevals_perfv": gyr_tensor_oevals_perfv.detach().numpy(),
 		## Squared radius of gyration R_g^2
@@ -576,12 +588,19 @@ def process_full_analysis(
 		## Potential energy V
 		"poteng_perfm": poteng_perfm,
 		"poteng_perfs": poteng_perfs,
+		# ## Neighbourhoods
+		# "nbc_perbm_A": nb_mean_dict['A'],
+		# "nbc_perbm_B": nb_mean_dict['B'],
+		# "nbc_perbm_C": nb_mean_dict['C'],
+		# "nbc_perbm_D": nb_mean_dict['D'],
 		## Neighbourhoods
-		"nbc_perbm_A": nb_mean_dict['A'],
-		"nbc_perbm_B": nb_mean_dict['B'],
-		"nbc_perbm_C": nb_mean_dict['C'],
-		"nbc_perbm_D": nb_mean_dict['D']
-		
+		"nbc_perfm": nbc_perfm,
+		"nbc_perfs": nbc_perfs,
+		"nbc_lastf": nbc_lastf,
+		## Positions
+		"positions_perfm": positions_perfm,
+		"positions_perfs": positions_perfs,
+		"positions_lastf": positions_lastf,
 	}
 	
 	# Save results
