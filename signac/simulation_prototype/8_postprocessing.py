@@ -297,7 +297,7 @@ def get_radius_of_gyration_sq(
 		gyr_evals_vec3 (`torch.Tensor`): the three eigenvalues of the gyration tensor in a single
 			vector. Eigenvalue ordering in this vector is irrelevant
 	"""
-	return gyr_evals_vec3.sum())
+	return gyr_evals_vec3.sum()
 
 
 def get_asphericity(
