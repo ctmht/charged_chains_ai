@@ -87,12 +87,18 @@ data_structure = {
     'shape_descriptors/gyr_tensor_oevals/gyr_tensor_oevals_perfv': ('float64', (3, 3)),
     'shape_descriptors/poteng/poteng_perfm': ('float64', ()),
 	'shape_descriptors/poteng/poteng_perfs': ('float64', ()),
+    'shape_descriptors/positions/positions_perfm': ('float64', (100, 3)),
+    'shape_descriptors/positions/positions_perfs': ('float64', (100, 3)),
+    'shape_descriptors/positions/positions_lastf': ('float64', (100, 3)),
+    'shape_descriptors/nbc/nbc_perfm': ('float64', (100, 4)),
+    'shape_descriptors/nbc/nbc_perfs': ('float64', (100, 4)),
+    'shape_descriptors/nbc/nbc_lastf': ('float64', (100, 4))
 }
 
 # Add blockiness and nbc_perbm datasets
 for bead in ['A', 'B', 'C', 'D']:
     data_structure[f'sequence_descriptors/blockinesses/blockiness_{bead}'] = ('float64', ())
-    data_structure[f'shape_descriptors/nbc_perbm/nbc_perbm_{bead}'] = ('float64', ())
+    # data_structure[f'shape_descriptors/nbc_perbm/nbc_perbm_{bead}'] = ('float64', ())
 
 # Add statistics datasets
 for stat in ['radgyr2', 'aspher', 'acylin', 'relsha']:
@@ -206,7 +212,7 @@ if __name__ == '__main__':
     elif TASK == 'autocorr':
         old_collect_autocorr()
     elif TASK == 'full':
-        output_h5_path = os.path.join(DATA_FOLDER, f"{TASK}_results.h5")
+        output_h5_path = os.path.join(DATA_FOLDER, f"{TASK}_fixed_results.h5")
         
         # Main processing
         with h5py.File(output_h5_path, 'a' if not REPLACE else 'w') as h5f:
