@@ -106,14 +106,14 @@ class SimulationsManager(FlowProject):
             
             job = self.open_job(statepoint)
             
-            job_config_json = os.path.abspath(os.path.join(job.path, 'config.json'))
-            json.dump(config, open(job_config_json, 'w'))
-            
             if job in self:
                 continue
             
             # Initialize job
             job.init()
+            
+            job_config_json = os.path.abspath(os.path.join(job.path, 'config.json'))
+            json.dump(config, open(job_config_json, 'w'))
         
 
 
