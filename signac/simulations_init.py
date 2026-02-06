@@ -24,5 +24,5 @@ print(CONFIG_FOLDER)
 
 for fname in os.listdir(CONFIG_FOLDER):
     if 'config' in fname and 'test' not in fname:
-        configpath = os.path.join('mltraining_scripts', 'configs', fname)
+        configpath = os.path.join(CONFIG_FOLDER, fname)
         simman.create_jobs_mltraining(configpath)
