@@ -7,6 +7,17 @@ import copy
 import sys
 import os
 
+# Adds signac project root to path
+project_root = os.path.abspath(
+	os.path.dirname(
+		os.path.dirname(
+			os.path.dirname(__file__)
+		)
+	)
+)
+print('\n\nProject root', project_root, '', sep='\n')
+sys.path.append(project_root)
+
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.normal import Normal
 from torch import optim
@@ -470,13 +481,13 @@ def _saveloadconfig():
 	print(config_w_results, loaded_config, sep='\n\n')
 
 
-def main(config_path: str, final_path: str):
+def main(config_path: str, final_path: str, data_path: str):
 	"""
 	Main function modified for use on Habrok through parallel signac jobs
 	"""
 	config = json.load(open(config_path, 'r'))
 	final = copy.deepcopy(config)
-	dataset, model, hyperparameters = setup_from_config(config)
+	dataset, model, hyperparameters = setup_from_config(config, data_path)
 		
 	losses_train, losses_val = train_model(
 		model,
@@ -498,5 +509,6 @@ def main(config_path: str, final_path: str):
 if __name__ == '__main__':
 	job_config_json = sys.argv[1]
 	job_final_json = sys.argv[2]
+	data_path = sys.argv[3]
 	
 	main(job_config_json, job_final_json)

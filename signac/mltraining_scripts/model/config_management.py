@@ -85,7 +85,8 @@ def set_defaults(config: dict):
 
 
 def setup_from_config(
-	config: dict
+	config: dict,
+	data_path: str
 ) -> tuple[dict, PolymerTransformerModule, dict]:
 	"""
 	
@@ -93,7 +94,7 @@ def setup_from_config(
 	print("Running experiment from config:", config, sep='\n')
 	
 	dataset = create_datasets(
-		os.path.join('data', 'full_fixed_results.h5'),
+		data_path,
 		zscore_norm = config['zscore_norm'],
 		minmax_norm = config['minmax_norm'],
 		test_prop = config['test_prop'],
