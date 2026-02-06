@@ -511,4 +511,4 @@ if __name__ == '__main__':
 	job_final_json = sys.argv[2]
 	data_path = sys.argv[3]
 	
-	main(job_config_json, job_final_json)
+	main(job_config_json, job_final_json, data_path)
