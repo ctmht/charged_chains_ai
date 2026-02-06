@@ -1,0 +1,43 @@
+{
+	"experiments": [
+		{
+			"base_name": "all_mha2",
+			"embedding_dim": [
+				32,
+				64
+			],
+			"mha_layers": [
+				2
+			],
+			"num_heads": [
+				2,
+				4,
+				8
+			],
+			"dropout": [
+				0.3
+			],
+			"hidden_dims_within": [
+				[64, 64],
+				[128, 64],
+				[128, 128]
+			],
+			"hidden_dims_after": [
+				[64],
+				[64, 32],
+				[64, 64],
+				[128],
+				[128, 32]
+			],
+			"lr": [
+				1e-5,
+				3e-5,
+				1e-4
+			],
+			"num_epochs": [
+				100
+			]
+		}
+	],
+	"do_not_vary": []
+}

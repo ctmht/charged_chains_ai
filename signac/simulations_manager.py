@@ -7,7 +7,7 @@ from flow import FlowProject
 import pandas as pd
 import signac
 
-from mltraining_scripts.training import load_configs
+from mltraining_scripts.model.config_management import load_configs
 
 
 class SimulationsManager(FlowProject):
@@ -262,7 +262,7 @@ def train_transformer_config(
     # Find Python script for running a training configuration
     jpp = os.path.abspath(job.project.path)
     training_fname = f"training.py"
-    python_script_location = os.path.join(jpp, training_fname)
+    python_script_location = os.path.join(jpp, 'mltraining_scripts', 'model', training_fname)
     
     job_config_json = os.path.abspath(os.path.join(job.path, 'config.json'))
     job_final_json = os.path.abspath(os.path.join(job.path, 'final.json'))
