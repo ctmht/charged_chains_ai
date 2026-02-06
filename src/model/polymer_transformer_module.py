@@ -157,10 +157,7 @@ class PolymerTransformerModule(nn.Module):
 		mode: bool = True
 	) -> None:
 		"""
-		Docstring for train
 		
-		:param mode: Description
-		:type mode: bool
 		"""
 		super().train(mode = mode)
 		self._mcdropout = False
@@ -170,7 +167,50 @@ class PolymerTransformerModule(nn.Module):
 		self
 	) -> None:
 		"""
-		Docstring for eval_mcdropout
+		
 		"""
 		super().eval()
 		self._mcdropout = True
+	
+	
+	def count_parameters(
+		self
+	) -> int:
+		"""
+		
+		"""
+		return sum(p.numel() for p in self.parameters() if p.requires_grad)
+	
+	
+	def parameters_l2norm(
+		self
+	) -> float:
+		"""
+		
+		"""
+		norm = 0
+		for name, param in self.named_parameters():
+			if 'linear' in name:
+				norm = norm + param.norm(2)
+		return norm
+	
+	
+	def save(
+		self,
+		path: str
+	):
+		"""
+		
+		"""
+		torch.save(self, path)
+	
+	
+	@classmethod
+	def load(
+		cls,
+		path: str
+	):
+		"""
+		
+		"""
+		return torch.load(path, weights_only = False)

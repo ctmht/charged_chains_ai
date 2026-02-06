@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 import h5py
@@ -21,128 +23,39 @@ OUTPUT_DSNAMES = [
 def minmax_normalize(
 	series: np.ndarray,
 	newmin: float = 0.0,
-	newmax: float = 1.0
+	newmax: float = 1.0,
+	oldmin: Optional[np.ndarray] = None,
+	oldmax: Optional[np.ndarray] = None,
+	**kwargs,
 ) -> tuple[np.ndarray, float, float]:
-	oldmin = series.min(axis = 0)
-	oldmax = series.max(axis = 0)
+	if oldmin is None and oldmax is None:
+		oldmin = series.min(axis = 0)
+		oldmax = series.max(axis = 0)
 	minmax_norm_series = (series - oldmin) / (oldmax - oldmin) * newmax + newmin
 	
 	return minmax_norm_series, oldmin, oldmax
 
 
 def zscore_normalize(
-	series: np.ndarray
+	series: np.ndarray,
+	oldmean: Optional[np.ndarray] = None,
+	oldstd: Optional[np.ndarray] = None,
+	**kwargs,
 ) -> tuple[np.ndarray, float, float]:
-	oldmean = series.mean(axis = 0)
-	oldstd = series.std(axis = 0, ddof = 1)
+	if oldmean is None and oldstd is None:
+		oldmean = series.mean(axis = 0)
+		oldstd = series.std(axis = 0, ddof = 1)
 	zscore_norm_series = (series - oldmean) / oldstd
 
 	return zscore_norm_series, oldmean, oldstd
 
 
-import numpy as np
-
-'''
-def normalize_spd_cholesky(covariances, normalizer, eps=1e-12, *args):
-	"""
-	Normalize SPD matrices via Cholesky decomposition.
-
-	Args:
-		covariances: (N, d, d) array of SPD matrices
-		target_min, target_max: Target range for normalized elements
-		eps: Small constant for numerical stability
-		
-	Returns:
-		normalized_cov: (N, d, d) normalized SPD matrices
-		stats: Dict with normalization parameters AND normalized Cholesky factors
-	"""
-	N, d, _ = covariances.shape
-
-	# 1. Regularize for numerical stability
-	reg_cov = covariances + eps * np.eye(d)[np.newaxis, :, :]
-
-	# 2. Cholesky decomposition
-	L = np.linalg.cholesky(reg_cov)  # Shape: (N, d, d)
-
-	# 3. Extract lower triangular elements
-	tril_idx = np.tril_indices(d)
-	L_elements = L[:, tril_idx[0], tril_idx[1]]  # Shape: (N, n_elements)
-
-	# 4. Compute statistics and normalize
-	L_min = L_elements.min(axis=0, keepdims=True)
-	L_max = L_elements.max(axis=0, keepdims=True)
-
-	# Avoid division by zero
-	L_range = L_max - L_min
-	L_range[L_range == 0] = 1.0
-
-	L_norm_elements, olda, oldb = normalizer(L_elements, *args)
-	# L_norm_elements = (L_elements - L_min) / L_range
-	# L_norm_elements = L_norm_elements * (target_max - target_min) + target_min
-
-	# 5. Store normalized elements in stats (CRITICAL FIX)
-	stats = {
-		'L_mean' if normalizer is zscore_normalize else 'L_min': olda,
-		'L_std' if normalizer is zscore_normalize else 'L_max': oldb,
-		'tril_idx': tril_idx,
-		'L_norm_elements': L_norm_elements  # Store normalized elements
-	}
-	
-	# 6. Reconstruct normalized Cholesky factors
-	L_norm = np.zeros_like(L)
-	L_norm[:, tril_idx[0], tril_idx[1]] = L_norm_elements
-
-	# 7. Reconstruct normalized SPD matrices
-	normalized_cov = L_norm @ L_norm.transpose(0, 2, 1)
-
-	return normalized_cov, stats
-
-
-def denormalize_spd_cholesky(stats, eps=1e-12):
-    """
-    Denormalize using stored normalized Cholesky factors.
-    
-    Args:
-        stats: Dict from normalize_spd_cholesky
-        eps: Small constant (not used here, kept for compatibility)
-        
-    Returns:
-        original_scale_cov: (N, d, d) SPD matrices at original scale
-    """
-    # Extract stored elements and parameters
-    L_norm_elements = stats['L_norm_elements']
-    L_min = stats['L_min']
-    L_max = stats['L_max']
-    target_min = stats['target_min']
-    target_max = stats['target_max']
-    tril_idx = stats['tril_idx']
-    
-    N = L_norm_elements.shape[0]
-    d = len(tril_idx[0])  # Number of unique elements in lower triangle
-    matrix_dim = int((np.sqrt(8*d + 1) - 1) / 2)  # Solve n*(n+1)/2 = d
-    
-    # 1. Reverse the normalization of Cholesky elements
-    L_range = L_max - L_min
-    L_range[L_range == 0] = 1.0
-    
-    L_orig_elements = (L_norm_elements - target_min) / (target_max - target_min)
-    L_orig_elements = L_orig_elements * L_range + L_min
-    
-    # 2. Reconstruct original Cholesky factors
-    L_orig = np.zeros((N, matrix_dim, matrix_dim))
-    L_orig[:, tril_idx[0], tril_idx[1]] = L_orig_elements
-    
-    # 3. Reconstruct original SPD matrices
-    original_scale_cov = L_orig @ L_orig.transpose(0, 2, 1)
-    
-    return original_scale_cov
-'''
-
 def normalize_outputs(
 	output_dsets: dict[str, np.ndarray],
 	zscore_norm: bool = True,
 	minmax_norm: bool = True,
-	**kwargs
+	recons: Optional[dict] = None,
+	**kwargs,
 ) -> tuple[dict[str, np.ndarray] | dict[str, np.ndarray | None]]:
 	"""
 	Applies normalization to each entry
@@ -152,40 +65,50 @@ def normalize_outputs(
 	outputs_zsn = {}
 	
 	if zscore_norm:
-		oldmeans = {}
-		oldstds = {}
+		oldmean = {}
+		oldstd = {}
 		for key in output_dsets:
 			if 'gte_oev' in key:
-				outputs_mmn[key] = output_dsets[key]
-				oldmeans[key] = None
-				oldstds[key] = None
+				outputs_zsn[key] = output_dsets[key]
+				oldmean[key] = None
+				oldstd[key] = None
 			else:
-				outputs_zsn[key], oldmeans[key], oldstds[key] = zscore_normalize(output_dsets[key])
+				outputs_zsn[key], oldmean[key], oldstd[key] = zscore_normalize(
+					output_dsets[key],
+					oldmean = recons['oldmean'][key] if recons else None,
+					oldstd = recons['oldstd'][key] if recons else None,
+				)
 	else:
 		for key in output_dsets:
 			outputs_zsn[key] = output_dsets[key]
 	
 	outputs_mmn = {}
 	if minmax_norm:
-		oldmins = {}
-		oldmaxs = {}
+		oldmin = {}
+		oldmax = {}
 		# oldtriudxm = {}
 		for key in output_dsets:
 			if 'gte_oev' in key:
-				outputs_mmn[key] = output_dsets[key]
-				oldmins[key] = None
-				oldmaxs[key] = None
+				outputs_mmn[key] = outputs_zsn[key]
+				oldmin[key] = None
+				oldmax[key] = None
 			else:
-				outputs_mmn[key], oldmins[key], oldmaxs[key] = minmax_normalize(outputs_zsn[key], **kwargs)
+				outputs_mmn[key], oldmin[key], oldmax[key] = minmax_normalize(
+					outputs_zsn[key],
+					oldmin = recons['oldmin'][key] if recons else None,
+					oldmax = recons['oldmax'][key] if recons else None,
+					newmin = kwargs['newmin'] if 'newmin' in kwargs else None,
+					newmax = kwargs['newmax'] if 'newmax' in kwargs else None,
+				)
 	else:
 		for key in output_dsets:
 			outputs_mmn[key] = outputs_zsn[key]
 
 	reconstructors = {
-		'oldmins': oldmins if minmax_norm else None,
-		'oldmaxs': oldmaxs if minmax_norm else None,
-		'oldmeans': oldmeans if zscore_norm else None,
-		'oldstds': oldstds if zscore_norm else None,
+		'oldmin': oldmin if minmax_norm else None,
+		'oldmax': oldmax if minmax_norm else None,
+		'oldmean': oldmean if zscore_norm else None,
+		'oldstd': oldstd if zscore_norm else None,
 	}
 	
 	return outputs_mmn, reconstructors
@@ -240,8 +163,8 @@ def train_val_test_split(
 			'outputs': (train_output_dsets, val_output_dsets, test_output_dsets)
 		}
 	return {
-		'inputs': (train_input_dsets, test_input_dsets),
-		'outputs': (train_output_dsets, test_output_dsets)
+		'inputs': (train_input_dsets, None, test_input_dsets),
+		'outputs': (train_output_dsets, None, test_output_dsets)
 	}
 
 
@@ -293,7 +216,7 @@ def create_datasets(
 	minmax_norm: bool = True,
 	test_prop: float = 0.2,
 	val_prop: float = 0.2,
-	**kwargs
+	**kwargs,
 ) -> dict[str, dict[str, np.ndarray] | dict[str, dict[str, np.ndarray | None]]]:
 	"""
 	Return:
@@ -321,18 +244,60 @@ def create_datasets(
 
 	renamed_output_ds = build_renamed(output_ds)
 	
-	print(renamed_output_ds['nbc'].shape)
+	splits = train_val_test_split(input_ds, renamed_output_ds, test_prop, val_prop)
 	
-	norm_output_ds, recons = normalize_outputs(renamed_output_ds, zscore_norm=zscore_norm, minmax_norm=minmax_norm, **kwargs)
+	norm_output_ds = dict.fromkeys(['train_in', 'train_out', 'val_in', 'val_out', 'test_in', 'test_out'], None)
 	
-	splits = train_val_test_split(input_ds, norm_output_ds, test_prop, val_prop)
+	# Normalize training targets and save statistics for identical processing on val and test sets
+	norm_output_trainout, recons_trainout = normalize_outputs(
+		splits['outputs'][0],
+		zscore_norm = zscore_norm,
+		minmax_norm = minmax_norm,
+		recons = None,
+		**kwargs,
+	)
+	norm_output_ds['train_in'] = splits['inputs'][0]['indexers/sequence']
+	norm_output_ds['train_out'] = norm_output_trainout
 	
-	return {
-		'train_in': splits['inputs'][0]['indexers/sequence'],
-		'train_out': splits['outputs'][0],
-		'val_in': splits['inputs'][1]['indexers/sequence'],
-		'val_out': splits['outputs'][1],
-		'test_in': splits['inputs'][2]['indexers/sequence'],
-		'test_out': splits['outputs'][2],
-		'reconstruct': recons
-	}
+	# Normalize (optional validation and) test targets using training statistics
+	norm_output_testout, recons_testout = normalize_outputs(
+		splits['outputs'][-1],
+		zscore_norm = zscore_norm,
+		minmax_norm = minmax_norm,
+		recons = recons_trainout,
+		**kwargs,
+	)
+	norm_output_ds['test_in'] = splits['inputs'][-1]['indexers/sequence']
+	norm_output_ds['test_out'] = norm_output_testout
+	
+	if splits['inputs'][1] and splits['outputs'][1]:
+		norm_output_val, recons_valout = normalize_outputs(
+			splits['outputs'][1],
+			zscore_norm = zscore_norm,
+			minmax_norm = minmax_norm,
+			recons = recons_trainout,
+			**kwargs,
+		)
+		norm_output_ds['val_in'] = splits['inputs'][1]['indexers/sequence']
+		norm_output_ds['val_out'] = norm_output_val
+	
+	return norm_output_ds
+
+
+if __name__ == '__main__':
+	import os
+	
+	dset_path = os.path.abspath(os.path.join('data', 'full_fixed_results.h5'))
+	
+	dataset = create_datasets(
+		dset_path,
+		zscore_norm = False,
+		minmax_norm = True,
+		test_prop = 0.2,
+		val_prop = 0.2
+	)
+	
+	for key, val in dataset.items():
+		print(key)
+		print(val)
+		print()

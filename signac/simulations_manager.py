@@ -1,10 +1,13 @@
 from typing import Literal
 import shutil
+import json
 import os
 
 from flow import FlowProject
 import pandas as pd
 import signac
+
+from src.model.config_management import load_configs
 
 
 class SimulationsManager(FlowProject):
@@ -87,18 +90,31 @@ class SimulationsManager(FlowProject):
 
     def create_jobs_mltraining(
         self,
-        dataframe_path: str
+        config_filepath: str
     ) -> None:
         """
         Creates statepoints and then jobs based on the information found in the dataframes
         """
-        df: pd.DataFrame = pd.read_pickle(dataframe_path)
-
-        for idx, row in df.iterrows():
-            statepoint = row.to_dict()
-
-            statepoint["idx"] = idx
-            statepoint["taskname"] = "ml_training"
+        config_path = os.path.abspath(config_filepath)
+        configs = load_configs(path = config_path)
+        
+        for config in configs:
+            statepoint = {
+                'taskname': 'ml_training',
+                'config': config
+            }
+            
+            job = self.open_job(statepoint)
+            
+            job_config_json = os.path.abspath(os.path.join(job.path, 'config.json'))
+            json.dump(config, open(job_config_json, 'w'))
+            
+            if job in self:
+                continue
+            
+            # Initialize job
+            job.init()
+        
 
 
 
@@ -210,9 +226,9 @@ def run_postprocessing(
     """
     Run Python postprocessing script
     """
-    # Find Python script for postprocessing
-    jpp = os.path.abspath(job.path)
-    postprocess_fname = f"8_postprocessing.py"
+    # Find Python script for running a training configuration
+    jpp = os.path.abspath(job.project.path)
+    postprocess_fname = f"training.py"
     python_script_location = os.path.join(jpp, postprocess_fname)
     
     # Set up shell command to run script
@@ -228,12 +244,37 @@ def run_postprocessing(
 ##############################
 # Labels for ML training
 ##############################
-
+@SimulationsManager.label
+def training_completed(job):
+    return job.isfile("final.json")
 
 ##############################
 # Operations for ML training
 ##############################
-
+@SimulationsManager.post(training_completed)
+@SimulationsManager.operation(cmd = True, with_job = True)
+def train_transformer_config(
+    job: signac.job.Job
+):
+    """
+    Run Python training script
+    """
+    # Find Python script for running a training configuration
+    jpp = os.path.abspath(job.project.path)
+    training_fname = f"training.py"
+    python_script_location = os.path.join(jpp, training_fname)
+    
+    job_config_json = os.path.abspath(os.path.join(job.path, 'config.json'))
+    job_final_json = os.path.abspath(os.path.join(job.path, 'final.json'))
+    
+    # Set up shell command to run script
+    run_py_script = f"python {python_script_location} {job_config_json} {job_final_json}"
+    command_to_run = run_py_script
+    
+    print(f"signac job {job.id[:7]}..: Running `training.py {job_config_json} {job_final_json}' "
+          f"to train model")
+    
+    return command_to_run
 
 
 

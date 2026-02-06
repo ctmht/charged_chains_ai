@@ -43,17 +43,18 @@ def get_blockinesses(
 	monomers = sorted(list(Counter(sequence).keys()))
 	
 	counts = {ch1 + '1': {ch2 + '2': 0 for ch2 in monomers} for ch1 in monomers}
-    
+	
 	for idx in range(len(sequence) - 1):
 		ch1 = sequence[idx]
 		ch2 = sequence[idx + 1]
 		counts[ch1 + '1'][ch2 + '2'] += 1
-    
+	
 	# Create transition matrix and make (row-)stochastic
 	mat = pd.DataFrame(counts, dtype = float).apply(lambda row: row / row.sum()).T.values
+	mat[np.isnan(mat)] = 0
 	if mat.sum() == len(sequence) - 1:
 		mat /= (len(sequence) - 1)
-	mat /= mat.sum(axis = 1)
+	mat = np.divide(mat, mat.sum(axis = 1), where = mat.sum(axis = 1) != 0)
 	
 	blockinesses: dict = {}
 	
