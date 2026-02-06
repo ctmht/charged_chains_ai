@@ -268,7 +268,7 @@ def train_transformer_config(
     job_final_json = os.path.abspath(os.path.join(job.path, 'final.json'))
     
     # Dataset path: charged_chains_ai/data/full_fixed_results.h5
-    data_path = os.path.abspath(os.path.join(os.path.dirname(jpp)), 'data', 'full_fixed_results.h5')
+    data_path = os.path.abspath(os.path.join(os.path.dirname(jpp), 'data', 'full_fixed_results.h5'))
     
     # Set up shell command to run script
     run_py_script = f"python {python_script_location} {job_config_json} {job_final_json} {data_path}"
