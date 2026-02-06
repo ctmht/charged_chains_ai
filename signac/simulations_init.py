@@ -18,7 +18,11 @@ simman.init_project(path = SIGNAC_FOLDER)
 #for taskname in ["autocorr", "full"]:
         # dfpath = os.path.join(DATA_FOLDER, f"{taskname}_dataframe.pkl")
         # simman.create_jobs_simulations(taskname, dfpath)
-for fname in os.listdir(os.path.join('mltraining_scripts', 'configs')):
+
+CONFIG_FOLDER = os.path.abspath(os.path.join('signac', 'mltraining_scripts', 'configs'))
+print(CONFIG_FOLDER)
+
+for fname in os.listdir(CONFIG_FOLDER):
     if 'config' in fname and 'test' not in fname:
         configpath = os.path.join('mltraining_scripts', 'configs', fname)
         simman.create_jobs_mltraining(configpath)
