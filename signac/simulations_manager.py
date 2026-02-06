@@ -7,7 +7,7 @@ from flow import FlowProject
 import pandas as pd
 import signac
 
-from src.model.config_management import load_configs
+from mltraining_scripts.training import load_configs
 
 
 class SimulationsManager(FlowProject):
