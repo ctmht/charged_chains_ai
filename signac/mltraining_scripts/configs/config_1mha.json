@@ -1,7 +1,7 @@
 {
 	"experiments": [
 		{
-			"base_name": "all_mha2",
+			"base_name": "all_mha1",
 			"embedding_dim": [
 				32,
 				64,

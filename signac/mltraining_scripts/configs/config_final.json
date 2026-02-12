@@ -1,43 +1,33 @@
 {
 	"experiments": [
 		{
-			"base_name": "all_mha3",
+			"base_name": "final",
 			"embedding_dim": [
-				32,
-				64
+				32
 			],
 			"mha_layers": [
-				3
+				2
 			],
 			"num_heads": [
-				2,
-				4,
-				8
+				2
 			],
 			"dropout": [
 				0.3
 			],
 			"hidden_dims_within": [
-				[64, 64, 64],
-				[128, 64, 64],
-				[128, 128, 64]
+				[128, 128]
 			],
 			"hidden_dims_after": [
-				[64],
-				[64, 32],
-				[64, 64],
-				[128],
-				[128, 32]
+				[128]
 			],
 			"lr": [
-				1e-5,
-				3e-5,
-				1e-4,
-				3e-4,
 				1e-3
 			],
 			"num_epochs": [
 				100
+			],
+			"tolerance": [
+				0.1
 			]
 		}
 	],

@@ -6,6 +6,8 @@ from copy import deepcopy
 import json
 import os
 
+import torch
+
 from mltraining_scripts.model.polymer_transformer_module import PolymerTransformerModule
 from mltraining_scripts.post_processing.dataset_normalization import create_datasets
 
@@ -33,6 +35,7 @@ DEFAULT_CONFIG = {
 	
 	'early_stopping': True,
 	'patience': 5,
+	'tolerance': torch.inf,
 	
 	'use_mcdropout': False,
 	

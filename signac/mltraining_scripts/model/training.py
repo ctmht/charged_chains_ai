@@ -42,8 +42,9 @@ class EarlyStopping:
 	https://github.com/ctmht/task_adaptation_dl/
 	"""
 	
-	def __init__(self, patience: int = 10) -> None:
+	def __init__(self, patience: int = 10, tolerance: float = torch.inf) -> None:
 		self.patience = patience
+		self.tolerance = tolerance
 		self.last_improvement = 0
 		self.best = 1e100
 
@@ -55,9 +56,14 @@ class EarlyStopping:
 			self.last_improvement = 0
 		else:
 			self.last_improvement += 1
-
-		return self.last_improvement >= self.patience
-
+		
+		whether = (
+			self.last_improvement >= self.patience
+		) or (
+			value - self.best >= self.tolerance
+		)
+		return whether
+	
 	def improves(self, new_value: float) -> bool:
 		return new_value < self.best
 
@@ -165,6 +171,7 @@ def train_model(
 			raise ValueError("Early stopping requires validation set")
 		
 		patience = hyperparameters.get('patience', 5)
+		patience = hyperparameters.get('tolerance', torch.inf)
 		early_stopping_tracker = EarlyStopping(patience = patience)
 	
 	ptmodel.train()
